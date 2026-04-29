@@ -1,36 +1,65 @@
 # kzhikcn-api
 
-kzhikcn-api 是一个基于 Go 语言开发的简单的无头内容管理系统后端
+kzhikcn-api is a lightweight headless CMS backend written in Go, built around Markdown content, predictable admin workflows, and simple deployment.
 
-## 核心功能
+## Highlights
 
-### 文章管理
-- 创建、查询、更新、删除文章
-- 文章内容（Markdown）管理
-- 文章资源（附件）上传与管理
-- 文章浏览量和点赞量统计
-- 文章软删除与恢复
+- Article lifecycle: draft/hidden/published, soft delete & restore
+- Markdown content with file-based assets
+- Categories & tags with expression filters
+- JWT auth + optional TOTP MFA
+- Rate limiting with high‑quota bypass keys
+- RSS & sitemap endpoints
+- Local storage and cache (Redis optional)
+- Zero‑dependency startup (local SQLite + local cache by default)
 
-### 用户认证
-- 账号密码登录
-- TOTP 多因素认证
-- 密码修改
+## Requirements
 
-### 分类与标签
-- 分类管理（创建、更新、删除）
-- 标签管理（创建、更新、删除）
-- 按分类/标签查询文章
+- Go 1.25+ (toolchain 1.26.2)
+- SQLite3 (default) or MySQL
+- Optional: Redis (cache)
 
-### 系统管理
-- 管理员信息管理
-- 系统资源监控
+## Quick start (local)
 
-## 快速开始
+1. Generate config: `go run . gen-config`
+2. Start server: `go run . serve -a 0.0.0.0:5083`
+3. First boot auto‑migrates the DB and creates a default admin (`admin` / `admin`). Change it immediately.
 
-### 环境要求
-- Go 1.25.0 或更高版本
-- MySQL 或 SQLite
+You can also run directly without `gen-config`. If `config.yml` is missing, it will be created from the default template without interactive prompts (no website/JWT questions).
 
-## API 文档
+Use `-c` to specify a config file: `go run . -c ./config.yml serve`.
 
-[API 文档](./docs/introduct.md)
+## Configuration
+
+- Default config file: `config.yml` (auto‑generated if missing).
+- Environment placeholders are supported inside config, e.g. `${WEBSITE_DESCRIPTION}` reads from env (see `docs/configuration.md`).
+- To enable HTTPS, set `cert_file` and `key_file`.
+
+## CLI
+
+See `docs/cli.md` for admin/user management commands.
+
+## API
+
+Base path: `/api/v1`
+
+See `docs/introduct.md` and `docs/api/*` for details.
+
+## Docs
+
+- `docs/introduct.md` (API overview, Chinese)
+- `docs/configuration.md`
+- `docs/cli.md`
+- `docs/deployment.md`
+
+## Development
+
+For hot reload, use Air with `.air.toml` (optional).
+
+## Docker
+
+The Docker image listens on `${ADDRESS}` (example: `0.0.0.0:5083`). Mount config and data directories in production.
+
+## 中文版本
+
+请阅读 `README.zh-CN.md`。

@@ -1,5 +1,22 @@
 # 快速入门
 
+## 基础信息
+
+- API 版本前缀：`/api/v1`
+- 默认请求/响应类型：`application/json`
+- 鉴权请求头：`Authorization: Bearer <token>`
+- 限流豁免请求头：`X-High-Quota-Key: <key>`（仅绕过限流，不代表管理员权限）
+
+## 分页与排序
+
+多数列表接口支持分页参数：
+
+- `page`：页码，默认 1
+- `limit`：每页数量，默认值与最大值由接口说明决定
+- `orderBy`：排序字段，格式为 `字段名:方向`（如 `publishedAt:desc`）
+
+如果接口支持排序或表达式筛选，会在接口文档中单独说明。
+
 ## 响应结构
 
 一般情况下所有接口都是返回统一的响应结构，少部分接口在成功时可能不会返回统一的响应结构，但是出现错误时一般情况下都会返回统一的响应结构
@@ -23,14 +40,14 @@
   "message": "请求成功",
   "data": [
     {
-    "id": 123,
-    "name": "张三",
-    "age": 30
+      "id": 123,
+      "name": "张三",
+      "age": 30
     }
   ],
   "meta": {
     "total": 1,
-    "count": 1,
+    "count": 1
   }
 }
 ```
@@ -39,13 +56,13 @@
 
 ```json
 {
-	"success": false,
-	"code": 400,
-	"message": "请求体格式错误",
-	"data": null,
-	"meta": {},
-	"errorCode": "system.parse_payload_error",
-	"traceId": "1776735700-d34baebd5f69a469"
+  "success": false,
+  "code": 400,
+  "message": "请求体格式错误",
+  "data": null,
+  "meta": {},
+  "errorCode": "system.parse_payload_error",
+  "traceId": "1776735700-d34baebd5f69a469"
 }
 ```
 
@@ -54,12 +71,15 @@
 某些接口支持查询条件表达式（查询参数 `expr`），用于筛选查询结果
 
 ### 查询条件表达式语法
+
 逻辑运算符：
+
 - `&` 与
 - `|` 或
 - `!` 非
 
 比较运算符：
+
 - `<` 小于
 - `>` 大于
 - `<=` 小于等于
@@ -77,11 +97,13 @@
 例子：
 
 查询已发布的文章中点赞点赞量大于100的文章列表
+
 ```
-status='published' & likes > 100 
+status='published' & likes > 100
 ```
 
 查询标题以“技术”结尾的文章
+
 ```
 title ~ "%技术"
 ```
@@ -128,28 +150,35 @@ Content-Type: application/json
 }
 ```
 
-
 ## 接口列表
 
-+ [权限认证](./api/auth.md)
-+ [文章相关接口](./api/articles.md)
-  + [获取文章列表](./api/articles.md#获取文章列表)
-  + [获取单篇文章信息](./api/articles.md#获取单篇文章信息)
-  + [增加文章浏览量](./api/articles.md#增加文章浏览量)
-  + [增加文章点赞量](./api/articles.md#增加文章点赞量)
-  + [获取渲染后的文章内容](./api/articles.md#获取渲染后的文章内容)
-  + [获取文章资源](./api/articles.md#获取文章资源)
-  + [获取文章列表（管理员）](./api/articles.md#获取文章列表（管理员）)
-  + [创建文章](./api/articles.md#创建文章)
-  + [更新文章信息](./api/articles.md#更新文章信息)
-  + [获取文章内容](./api/articles.md#获取文章内容)
-  + [更新文章内容](./api/articles.md#更新文章内容)
-  + [批量删除文章](./api/articles.md#批量删除文章)
-  + [获取已删除的文章列表](./api/articles.md#获取已删除的文章列表)
-  + [恢复已删除的文章](./api/articles.md#恢复已删除的文章)
-  + [获取文章资源列表](./api/articles.md#获取文章资源列表)
-  + [上传资源](./api/articles.md#上传资源)
-  + [删除文章资源](./api/articles.md#删除资源)
+- [权限认证](./api/auth.md)
+- [当前用户（管理员）](./api/users.md)
+- [文章相关接口](./api/articles.md)
+  - [获取文章列表](./api/articles.md#获取文章列表)
+  - [获取单篇文章信息](./api/articles.md#获取单篇文章信息)
+  - [增加文章浏览量](./api/articles.md#增加文章浏览量)
+  - [增加文章点赞量](./api/articles.md#增加文章点赞量)
+  - [获取渲染后的文章内容](./api/articles.md#获取渲染后的文章内容)
+  - [获取文章资源](./api/articles.md#获取文章资源)
+  - [获取文章列表（管理员）](./api/articles.md#获取文章列表（管理员）)
+  - [创建文章](./api/articles.md#创建文章)
+  - [更新文章信息](./api/articles.md#更新文章信息)
+  - [获取文章内容](./api/articles.md#获取文章内容)
+  - [更新文章内容](./api/articles.md#更新文章内容)
+  - [批量删除文章](./api/articles.md#批量删除文章)
+  - [获取已删除的文章列表](./api/articles.md#获取已删除的文章列表)
+  - [恢复已删除的文章](./api/articles.md#恢复已删除的文章)
+  - [获取文章资源列表](./api/articles.md#获取文章资源列表)
+  - [上传资源](./api/articles.md#上传资源)
+  - [删除文章资源](./api/articles.md#删除文章资源)
 
-+ [文章分类相关接口](./api/categories.md)
-+ [文章标签相关接口](./api/tags.md)
+- [文章分类相关接口](./api/categories.md)
+- [文章标签相关接口](./api/tags.md)
+- [系统资源（RSS / Sitemap）](./api/system.md)
+
+## 其他文档
+
+- [配置说明](./configuration.md)
+- [CLI 使用](./cli.md)
+- [部署说明](./deployment.md)

@@ -12,11 +12,12 @@ GET /api/v1/articles
 
 **查询参数**：
 
-| 参数名     | 类型  | 描述                  | 默认值                |
-| ------- | --- | ------------------- | ------------------ |
-| page    | 整数  | 页码                  | 1                  |
-| limit   | 整数  | 每页数量，最大值为 100       | 20                 |
+| 参数名  | 类型   | 描述                               | 默认值             |
+| ------- | ------ | ---------------------------------- | ------------------ |
+| page    | 整数   | 页码                               | 1                  |
+| limit   | 整数   | 每页数量，最大值为 100             | 20                 |
 | orderBy | 字符串 | 排序字段，格式为 `字段名:排序方向` | "publishedAt:desc" |
+| expr    | 字符串 | 过滤表达式（见快速入门）           | 无                 |
 
 **排序字段说明**：
 
@@ -30,6 +31,10 @@ GET /api/v1/articles
 - `updatedAt:desc` - 按更新时间降序排序
 - `likes:desc` - 按点赞数降序排序
 - `views:desc` - 按查看数降序排序
+
+**过滤表达式允许字段**：
+
+`id`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`, `update_at`, `published_at`
 
 **请求示例**：
 
@@ -313,8 +318,7 @@ Content-Type: application/json
 **HTML 格式响应**：
 
 ```html
-HTTP/1.1 200 OK
-Content-Type: text/html; charset=utf-8
+HTTP/1.1 200 OK Content-Type: text/html; charset=utf-8
 
 <h1>文章标题</h1>
 <p>文章内容</p>
@@ -382,7 +386,12 @@ GET /api/v1/admin/articles
 > `id`, `status`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`,`update_at`, `published_at`, `status`
 
 - 与公共接口相同，可额外使用 `expr` 参数使用[查询条件表达式](../introduct.md#查询条件表达式)
-  **请求示例**：
+- `onlyDeleted`（bool）：仅展示已软删除文章
+
+**过滤表达式允许字段**：
+
+`id`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`, `update_at`, `published_at`, `status`
+**请求示例**：
 
 ```http
 GET /api/v1/admin/articles HTTP/1.1
@@ -440,7 +449,7 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
+- `articles.find_failed` 查询文章信息失败
 
 ---
 
@@ -456,16 +465,16 @@ POST /api/v1/admin/articles
 
 **请求体参数**：
 
-| 字段名           | 类型  | 必填    | 描述                           | 默认值   |
-| ------------- | --- | ----- | ---------------------------- | ----- |
-| title         | 字符串 | **是** | 文章标题                         | 无     |
-| customID      | 字符串 | 否     | 自定义文章ID                      | 文章ID  |
-| description   | 字符串 | 否     | 文章描述                         | -     |
-| coverImage    | 字符串 | 否     | 封面图片URL                      | -     |
-| category      | 字符串 | 否     | 文章分类名字（必须存在对应的分类）            | -     |
-| tags          | 数组  | 否     | 文章标签列表                       | []    |
-| enableComment | 布尔值 | 否     | 是否启用评论                       | false |
-| status        | 字符串 | 否     | 文章状态（published/draft/hidden） | draft |
+| 字段名        | 类型   | 必填   | 描述                               | 默认值 |
+| ------------- | ------ | ------ | ---------------------------------- | ------ |
+| title         | 字符串 | **是** | 文章标题                           | 无     |
+| customID      | 字符串 | 否     | 自定义文章ID                       | 文章ID |
+| description   | 字符串 | 否     | 文章描述                           | -      |
+| coverImage    | 字符串 | 否     | 封面图片URL                        | -      |
+| category      | 字符串 | 否     | 文章分类名字（必须存在对应的分类） | -      |
+| tags          | 数组   | 否     | 文章标签列表                       | []     |
+| enableComment | 布尔值 | 否     | 是否启用评论                       | false  |
+| status        | 字符串 | 否     | 文章状态（published/draft/hidden） | draft  |
 
 **请求示例**：
 
@@ -526,9 +535,9 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.category_not_found`没有找到分类
-* `articles.create_failed`创建文章失败
+- `articles.find_failed` 查询文章信息失败
+- `articles.category_not_found`没有找到分类
+- `articles.create_failed`创建文章失败
 
 ---
 
@@ -547,19 +556,19 @@ PATCH /api/v1/admin/articles/{article_id}
 **请求体参数**：
 
 > !note
-> 
+>
 > 空值表示不修改
-> 
+>
 > tags字段的空值为`null`，如果tags字段为`[]`则意为删除所有标签
 
-| 字段名           | 类型  | 必填  | 描述                           |
-| ------------- | --- | --- | ---------------------------- |
-| title         | 字符串 | 否   | 文章标题                         |
-| customID      | 字符串 | 否   | 自定义文章ID                      |
-| description   | 字符串 | 否   | 文章描述                         |
-| coverImage    | 字符串 | 否   | 封面图片URL                      |
-| category      | 字符串 | 否   | 文章分类名字（必须存在对应的分类）            |
-| tags          | 数组  | 否   | 文章标签列表                       |
+| 字段名        | 类型   | 必填 | 描述                               |
+| ------------- | ------ | ---- | ---------------------------------- |
+| title         | 字符串 | 否   | 文章标题                           |
+| customID      | 字符串 | 否   | 自定义文章ID                       |
+| description   | 字符串 | 否   | 文章描述                           |
+| coverImage    | 字符串 | 否   | 封面图片URL                        |
+| category      | 字符串 | 否   | 文章分类名字（必须存在对应的分类） |
+| tags          | 数组   | 否   | 文章标签列表                       |
 | enableComment | 布尔值 | 否   | 是否启用评论                       |
 | status        | 字符串 | 否   | 文章状态（published/draft/hidden） |
 
@@ -624,10 +633,10 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.not_found`没有找到文章
-* `articles.category_not_found`没有找到分类
-* `articles.update_failed`更新文章信息失败
+- `articles.find_failed` 查询文章信息失败
+- `articles.not_found`没有找到文章
+- `articles.category_not_found`没有找到分类
+- `articles.update_failed`更新文章信息失败
 
 ---
 
@@ -695,10 +704,10 @@ Content-Type: text/plain
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.not_found`没有找到文章
-* `articles.content.not_found`没有找到文章正文
-* `articles.content.load_failed`加载文章正文失败
+- `articles.find_failed` 查询文章信息失败
+- `articles.not_found`没有找到文章
+- `articles.content.not_found`没有找到文章正文
+- `articles.content.load_failed`加载文章正文失败
 
 ---
 
@@ -745,9 +754,9 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.not_found`没有找到文章
-* `articles.content.write_failed`更新文章正文失败
+- `articles.find_failed` 查询文章信息失败
+- `articles.not_found`没有找到文章
+- `articles.content.write_failed`更新文章正文失败
 
 ---
 
@@ -761,10 +770,10 @@ DELETE /api/v1/admin/articles/batch-delete
 
 **请求体**：
 
-| 字段         | 类型       | 必填    | 描述                      | 默认值   |
-| ---------- | -------- | ----- | ----------------------- | ----- |
-| ids        | []string | **是** | 要删除的文章ID（不能是自定义id）      | -     |
-| hardDelete | bool     | 否     | 硬删除（直接删除文章和其附带的资源，无法恢复） | false |
+| 字段       | 类型     | 必填   | 描述                                           | 默认值 |
+| ---------- | -------- | ------ | ---------------------------------------------- | ------ |
+| ids        | []string | **是** | 要删除的文章ID（不能是自定义id）               | -      |
+| hardDelete | bool     | 否     | 硬删除（直接删除文章和其附带的资源，无法恢复） | false  |
 
 **请求示例**：
 
@@ -795,8 +804,8 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.delete_failed`删除文章失败
-* `articles.clean_assets_failed`清除文章资源失败
+- `articles.delete_failed`删除文章失败
+- `articles.clean_assets_failed`清除文章资源失败
 
 ---
 
@@ -871,7 +880,7 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed`查询文章失败
+- `articles.find_failed`查询文章失败
 
 ---
 
@@ -885,9 +894,9 @@ POST /api/v1/admin/articles/trash-bin/restore
 
 **请求体**：
 
-| 字段  | 类型       | 必填    | 描述                 | 默认值 |
-| --- | -------- | ----- | ------------------ | --- |
-| ids | []string | **是** | 要恢复的文章ID（不能是自定义id） | -   |
+| 字段 | 类型     | 必填   | 描述                             | 默认值 |
+| ---- | -------- | ------ | -------------------------------- | ------ |
+| ids  | []string | **是** | 要恢复的文章ID（不能是自定义id） | -      |
 
 **请求示例**：
 
@@ -918,7 +927,7 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.restore_failed`恢复文章失败
+- `articles.restore_failed`恢复文章失败
 
 ---
 
@@ -963,13 +972,7 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-+ `articles.assets.file_missing`上传的负载中没有找到文件
-
-+ `articles.assets.invalid_filename`资源ID（文件名）不合法
-
-+ `articles.assets.filename_is_required`资源ID（文件名）是必须提供的
-
-+ `articles.assets.load_failed`加载资源失败
+- `articles.assets.list_failed`列出资源列表失败
 
 ---
 
@@ -1021,9 +1024,13 @@ Content-Type: application/json
 }
 ```
 
-  **接口错误代码**：
+**接口错误代码**：
 
-+ `articles.assets.list_failed`列出资源列表失败
+- `articles.assets.file_missing`上传的负载中没有找到文件
+- `articles.assets.invalid_filename`资源ID（文件名）不合法
+- `articles.assets.filename_is_required`资源ID（文件名）是必须提供的
+- `articles.assets.load_failed`加载资源失败
+- `articles.assets.upload_failed`上传资源失败
 
 ---
 
@@ -1063,10 +1070,6 @@ Content-Type: application/json
 }
 ```
 
-  **接口错误代码**：
+**接口错误代码**：
 
-+ `articles.delete_assets_failed`删除文章资源失败
-  
-  
-
-
+- `articles.delete_assets_failed`删除文章资源失败
