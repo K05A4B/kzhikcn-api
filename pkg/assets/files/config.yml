@@ -1,0 +1,115 @@
+# TLS证书文件路径
+# cert_file: /sys/tls/file
+
+# TLS密钥文件路径
+# key_file: /sys/tls/file
+
+# 存储配置
+storage:
+  provider: local # 目前只支持本地存储
+  articles:
+    base_path: ./data/articles # 文章信息存储基础路径
+
+cache:
+  provider: local # local | redis
+  local:
+    dir: ./sys/cache  # 持久化存储路径
+
+  # Redis缓存配置
+  redis:
+    host: localhost
+    port: 6379
+    prefix: "kzhikcn:" # 缓存key前缀，用于避免与其他应用的缓存key冲突
+    # timeout: 10s
+    # password: ""
+    # db: 0
+
+
+machine_readable_resources:
+  base_url: ${WEBSITE_URL} # 填写网站url
+
+  url_templates:
+    article: /articles/{{article.id}}        # 文章内容路径 {{article.id/custom_id}} 会被替换为文章id/自定义id
+    category: /categories/{{category.name}}  # 分类页面路径 {{category.name}} 会被替换为主题id/名字
+    tag:  /tags/{{tag.name}}                 # 分类页面路径 {{tag.name}} 会被替换为标签id/名字
+
+  rss:
+    enable: true
+    # RSS标题
+    title: ${WEBSITE_NAME}
+    # RSS描述
+    description: ${WEBSITE_DESCRIPTION}
+    # RSS最大文章数
+    max_articles: 10
+
+  sitemap:
+    enable: true
+    # 拓展sitemap项 loc只需要填写uri即可，生成sitemap时会自动加上base_url
+    extends: 
+      - { loc: / }
+      # - { loc: /, last_modify: "{time}", change_freq: weekly, priority: 0.5 }
+      # - { loc: /tags, change_freq: monthly }
+      # - { loc: /categories, change_freq: monthly }
+
+# 鉴权相关
+auth:
+  # JWT相关配置
+  jwt:
+    type: hs256 # 签名使用的算法 [hs256]
+    expiry: 72h # 有效期 72小时
+    secret: ${JWT_SECRET} # 密钥，如果确定后不建议修改，否则会导致所有修改前签发的token失效
+
+# 接口限流配置
+# !: 对于JWT认证通过的和高配额密钥校验通过的请求不会被限流
+http_rate:
+  # 表示单个ip每秒钟最多可以请求100次api（不包含绕过http_rate的请求）
+  limit_per_ip: 100/s
+  # limit_per_ip: 6000/m # 每分钟最多可以请求6000次api
+  # limit_per_ip: 360000/h # 每小时最多可以请求360000次api
+
+  # ip黑名单，支持CIDR格式
+  # 会从前到后按顺序匹配，第一个匹配到的会生效
+  black_list: [
+    # 192.168.1.1/32,  # 封禁 192.168.1.1 这个ip
+    # 192.168.1.2,     # 封禁 192.168.1.2 这个ip
+    # 10.1.1.0/24,     # 封禁 10.1.1.0/24 这个网络
+    # 0.0.0.0/0,       # 封禁所有ipv4地址
+    # '::/0',          # 封禁所有ipv6地址
+    # 2000::/3       # 封禁所有ipv6的全球单播地址
+  ]
+
+  # 如果请求头的 X-High-Quota-Key 内容为下列任意字符串则会绕过http_rate的配置
+  high_quota_keys: [
+    # "${HTTP_RATE_API_KEY_1}" # 从环境变量 HTTP_RATE_API_KEY_1 中读取api key
+  ]
+
+db:
+  # 目前只支持sqlite3
+  driver: sqlite3
+  
+  # 数据库地址
+  dsn: file:./sys/database.db?_foreign_keys=on
+
+log:
+  # 是否以文件的形式记录日志
+  enable: true
+  
+  # 日志等级
+  log_level: info
+
+  # 日志轮换配置
+  lumberjack:
+    # 日志文件名
+    filename: ./sys/logs/latest.log
+  
+    # 日志最大大小（单位: MB）
+    maxsize: 10
+  
+    # 日志最多保留几天
+    maxage: 30
+  
+    # 日志最大备份数
+    maxbackups: 3
+  
+    # 是否压缩旧的日志
+    compress: true
