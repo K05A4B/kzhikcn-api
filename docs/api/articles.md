@@ -963,13 +963,7 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-+ `articles.assets.file_missing`上传的负载中没有找到文件
-
-+ `articles.assets.invalid_filename`资源ID（文件名）不合法
-
-+ `articles.assets.filename_is_required`资源ID（文件名）是必须提供的
-
-+ `articles.assets.load_failed`加载资源失败
++ `articles.assets.list_failed`列出资源列表失败
 
 ---
 
@@ -1021,9 +1015,15 @@ Content-Type: application/json
 }
 ```
 
-  **接口错误代码**：
+**接口错误代码**：
 
-+ `articles.assets.list_failed`列出资源列表失败
++ `articles.assets.file_missing`上传的负载中没有找到文件
+
++ `articles.assets.invalid_filename`资源ID（文件名）不合法
+
++ `articles.assets.filename_is_required`资源ID（文件名）是必须提供的
+
++ `articles.assets.load_failed`加载资源失败
 
 ---
 
