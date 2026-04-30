@@ -23,8 +23,15 @@ var AppCli = cli.App{
 
 	Commands: []*cli.Command{
 		{
-			Name:   "gen-config",
-			Usage:  "生成配置文件",
+			Name:  "gen-config",
+			Usage: "生成配置文件",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "default",
+					Usage:   "输出默认配置到配置文件",
+					Aliases: []string{"d"},
+				},
+			},
 			Action: genConfig,
 		},
 		{

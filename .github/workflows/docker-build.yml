@@ -43,7 +43,7 @@ jobs:
           context: .
           push: true
           tags: |
-            k05a4b/kzhikcn-api:latest
-            k05a4b/kzhikcn-api:${{ steps.version.outputs.version }}
+            ${{ secrets.REGISTRY_USERNAME }}/kzhikcn-api:latest
+            ${{ secrets.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}
             ghcr.io/${{ secrets.REGISTRY_USERNAME }}/kzhikcn-api:latest
             ghcr.io/${{ secrets.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}

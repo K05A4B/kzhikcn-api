@@ -57,10 +57,10 @@ type MachineReadableResources struct {
 	} `yaml:"url_templates"`
 
 	Rss struct {
-		Enable      bool   `yaml:"enable"`
-		Title       string `yaml:"title"`
-		Description string `yaml:"description"`
-		MaxArticles int    `yaml:"max_articles"`
+		Enable      bool           `yaml:"enable"`
+		Title       EnvVarResolver `yaml:"title"`
+		Description EnvVarResolver `yaml:"description"`
+		MaxArticles int            `yaml:"max_articles"`
 	} `yaml:"rss"`
 
 	Sitemap struct {

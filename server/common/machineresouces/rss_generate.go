@@ -73,8 +73,8 @@ func GenerateRSS(articles []data.Article) ([]byte, error) {
 		Channel Channel `xml:"channel"`
 	}{
 		Channel: Channel{
-			Title:       conf.Rss.Title,
-			Description: conf.Rss.Description,
+			Title:       conf.Rss.Title.String(),
+			Description: conf.Rss.Description.String(),
 			Link:        conf.BaseUrl.String(),
 			Items:       items,
 		},

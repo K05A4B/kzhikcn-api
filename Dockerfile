@@ -20,7 +20,10 @@ COPY --from=build /app/kzhikcn .
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
+ 
+RUN mkdir -p ./sys
 
+RUN /app/kzhikcn -c /app/sys/config.yml gen-config -d && ln -s /app/sys/config.yml /app/config.yml
 
 EXPOSE 5083
-CMD ["./kzhikcn", "serve", "-a", "${ADDRESS}"]
+CMD ["/bin/sh", "-c", "./kzhikcn serve -a ${ADDRESS}"]

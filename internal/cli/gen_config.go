@@ -19,6 +19,11 @@ func genConfig(ctx *cli.Context) error {
 		return err
 	}
 
+	if ctx.Bool("default") {
+		fp.Write([]byte(assets.DefaultConfig))
+		return nil
+	}
+
 	keyToPrompt := map[string]string{
 		"WEBSITE_URL":         "输入您的网站URL[例如: https://example.com]",
 		"WEBSITE_NAME":        "输入您的网站名称",

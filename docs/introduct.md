@@ -1,5 +1,46 @@
 # 快速入门
 
+## 部署
+
+下面仅展示快速部署，如需自定义部署请参考[部署](deploy.md)
+
+### docker 部署
+
+```bash
+docker run -d --name kzhikcn-api \
+  -p 5083:5083 \
+  -e JWT_SECRET=your_jwt_secret \
+  -e WEBSITE_NAME=your_website_name \
+  -e WEBSITE_DESCRIPTION=your_website_description \
+  -e WEBSITE_URL=https://example.com \
+  -e ADDRESS=:5083 \
+  -v ./data:/app/data \
+  -v ./sys:/app/sys \
+  ghcr.io/k05a4b/kzhikcn-api:latest
+```
+
+**docker-compose.yml**
+```yaml
+version: '3'
+services:
+  kzhikcn-api:
+    name: kzhikcn-api
+    image: ghcr.io/k05a4b/kzhikcn-api:latest
+    ports:
+      - 5083:5083
+    environment:
+      - JWT_SECRET=your_jwt_secret
+      - WEBSITE_NAME=your_website_name
+      - WEBSITE_DESCRIPTION=your_website_description
+      - WEBSITE_URL=https://example.com
+      - ADDRESS=:5083
+
+    volumes:
+      - ./data:/app/data
+      - ./sys:/app/sys
+
+    restart: always
+```
 ## 响应结构
 
 一般情况下所有接口都是返回统一的响应结构，少部分接口在成功时可能不会返回统一的响应结构，但是出现错误时一般情况下都会返回统一的响应结构
