@@ -1,0 +1,47 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHPACKAGES_TOKEN }}
+
+      - name: Get app version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' internal/appinfo/app_info.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version: $VERSION"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            k05a4b/kzhikcn-api:latest
+            k05a4b/kzhikcn-api:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/kzhikcn-api:latest
+            ghcr.io/${{ github.repository_owner }}/kzhikcn-api:${{ steps.version.outputs.version }}

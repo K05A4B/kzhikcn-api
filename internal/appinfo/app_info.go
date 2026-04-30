@@ -1,19 +1,28 @@
 package appinfo
 
+import (
+	_ "embed"
+	"encoding/json"
+)
+
 var (
-	CurrentInfo = AppInfo{
-		Name:      "kzhikcn-api",
-		Version:   "0.0.0-alpha",
-		Author:    "kzhik",
-		Copyright: "© 2025 kzhik All rights reserved.",
-		Meta:      map[string]any{},
-	}
+	CurrentInfo = AppInfo{}
 )
 
 type AppInfo struct {
-	Name      string
-	Version   string
-	Author    string
-	Copyright string
-	Meta      map[string]any
+	Name      string         `json:"name"`
+	Version   string         `json:"version"`
+	Author    string         `json:"author"`
+	Copyright string         `json:"copyright"`
+	Meta      map[string]any `json:"meta"`
+}
+
+//go:embed app_info.json
+var currInfoJson string
+
+func init() {
+	err := json.Unmarshal([]byte(currInfoJson), &CurrentInfo)
+	if err != nil {
+		panic(err)
+	}
 }
