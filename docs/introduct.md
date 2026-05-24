@@ -2,7 +2,7 @@
 
 ## 部署
 
-下面仅展示快速部署，如需自定义部署请参考[部署](deploy.md)
+下面仅展示快速部署，如需自定义部署请参考[自定义部署](deploy.md)
 
 ### docker 部署
 
@@ -29,11 +29,11 @@ services:
     ports:
       - 5083:5083
     environment:
-      - JWT_SECRET=your_jwt_secret
-      - WEBSITE_NAME=your_website_name
-      - WEBSITE_DESCRIPTION=your_website_description
-      - WEBSITE_URL=https://example.com
-      - ADDRESS=:5083
+      - JWT_SECRET=your_jwt_secret 					 # jwt密钥
+      - WEBSITE_NAME=your_website_name 				 # 站点名字（RSS/Sitemap相关）
+      - WEBSITE_DESCRIPTION=your_website_description # 网站描述 （RSS/Sitemap相关）
+      - WEBSITE_URL=https://example.com				 # 网站URL （RSS/Sitemap相关）
+      - ADDRESS=:5083								 # 监听地址
 
     volumes:
       - ./data:/app/data
