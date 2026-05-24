@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io"
 	"os"
 	"sync"
 
@@ -22,21 +23,21 @@ type LogConf struct {
 }
 
 type Database struct {
-	Driver string         `yaml:"driver"`
-	Dsn    EnvVarResolver `yaml:"dsn"`
+	Driver string `yaml:"driver"`
+	Dsn    string `yaml:"dsn"`
 }
 
 type HttpRate struct {
-	LimitPerIP    RateLimit        `yaml:"limit_per_ip"`
-	BlackList     []NetAddr        `yaml:"black_list"`
-	HighQuotaKeys []EnvVarResolver `yaml:"high_quota_keys"`
+	LimitPerIP    RateLimit `yaml:"limit_per_ip"`
+	BlackList     []NetAddr `yaml:"black_list"`
+	HighQuotaKeys []string  `yaml:"high_quota_keys"`
 }
 
 type Auth struct {
-	TOTPMasterKey EnvVarResolver `yaml:"totp_master_key"`
+	TOTPMasterKey string `yaml:"totp_master_key"`
 	JWT           struct {
-		Secret EnvVarResolver `yaml:"secret"`
-		Expiry Duration       `yaml:"expiry"`
+		Secret string   `yaml:"secret"`
+		Expiry Duration `yaml:"expiry"`
 	} `yaml:"jwt"`
 }
 
@@ -48,7 +49,7 @@ type SitemapExtend struct {
 }
 
 type MachineReadableResources struct {
-	BaseUrl      EnvVarResolver `yaml:"base_url"`
+	BaseUrl      string `yaml:"base_url"`
 	UrlTemplates struct {
 		Article  TemplateString `yaml:"article"`
 		Category TemplateString `yaml:"category"`
@@ -57,10 +58,10 @@ type MachineReadableResources struct {
 	} `yaml:"url_templates"`
 
 	Rss struct {
-		Enable      bool           `yaml:"enable"`
-		Title       EnvVarResolver `yaml:"title"`
-		Description EnvVarResolver `yaml:"description"`
-		MaxArticles int            `yaml:"max_articles"`
+		Enable      bool   `yaml:"enable"`
+		Title       string `yaml:"title"`
+		Description string `yaml:"description"`
+		MaxArticles int    `yaml:"max_articles"`
 	} `yaml:"rss"`
 
 	Sitemap struct {
@@ -79,12 +80,12 @@ type StorageConf struct {
 }
 
 type CacheRedisConf struct {
-	Addr     string         `yaml:"addr"`
-	Prefix   string         `yaml:"prefix"`
-	Username string         `yaml:"username"`
-	Password EnvVarResolver `yaml:"password"`
-	DB       int            `yaml:"db"`
-	Timeout  Duration       `yaml:"timeout"`
+	Addr     string   `yaml:"addr"`
+	Prefix   string   `yaml:"prefix"`
+	Username string   `yaml:"username"`
+	Password string   `yaml:"password"`
+	DB       int      `yaml:"db"`
+	Timeout  Duration `yaml:"timeout"`
 }
 
 type CacheLocalConf struct {
@@ -97,7 +98,9 @@ type CacheConf struct {
 	Redis    CacheRedisConf `yaml:"redis"`
 }
 
-type Config struct {
+type Config rawConfig
+
+type rawConfig struct {
 	CertFile string      `yaml:"cert_file"`
 	KeyFile  string      `yaml:"key_file"`
 	Storage  StorageConf `yaml:"storage"`
@@ -111,17 +114,41 @@ type Config struct {
 	Cache    CacheConf `yaml:"cache"`
 }
 
-func LoadConfig(file string) (*Config, error) {
+func (c *Config) UnmarshalYAML(value *yaml.Node) error {
+	nodes := []*yaml.Node{}
+
+	// 去除顶层的ScalarNode
+	for _, item := range value.Content {
+		if item.Kind == yaml.ScalarNode {
+			continue
+		}
+
+		nodes = append(nodes, item)
+	}
+
+	err := resolveEnv(value.Content)
+	if err != nil {
+		return err
+	}
+
+	raw := rawConfig{}
+	err = value.Decode(&raw)
+	if err != nil {
+		return err
+	}
+
+	*c = Config(raw)
+
+	return nil
+}
+
+func LoadConfig(reader io.Reader) (*Config, error) {
 	configMux.Lock()
 	defer configMux.Unlock()
 
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
 	config = new(Config)
-	err = yaml.Unmarshal(data, config)
+	dec := yaml.NewDecoder(reader)
+	err := dec.Decode(config)
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +158,17 @@ func LoadConfig(file string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+func LoadConfigFromFile(file string) (*Config, error) {
+	data, err := os.OpenFile(file, os.O_RDONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	defer data.Close()
+	config, err := LoadConfig(data)
+	return config, err
 }
 
 func GetConf() *Config {

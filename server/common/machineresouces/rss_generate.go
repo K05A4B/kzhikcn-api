@@ -43,7 +43,7 @@ func GenerateRSS(articles []data.Article) ([]byte, error) {
 			return nil
 		})
 
-		link = conf.BaseUrl.String() + link
+		link = conf.BaseUrl + link
 
 		if err != nil {
 			return nil, err
@@ -73,9 +73,9 @@ func GenerateRSS(articles []data.Article) ([]byte, error) {
 		Channel Channel `xml:"channel"`
 	}{
 		Channel: Channel{
-			Title:       conf.Rss.Title.String(),
-			Description: conf.Rss.Description.String(),
-			Link:        conf.BaseUrl.String(),
+			Title:       conf.Rss.Title,
+			Description: conf.Rss.Description,
+			Link:        conf.BaseUrl,
 			Items:       items,
 		},
 	}

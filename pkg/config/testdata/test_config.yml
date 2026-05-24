@@ -1,0 +1,65 @@
+storage:
+  provider: local
+  articles:
+    base_path: ./data/articles
+
+cache:
+  provider: local
+  local:
+    dir: ./sys/cache
+
+  redis:
+    host: localhost
+    port: 6379
+    prefix: "kzhikcn:"
+
+
+machine_readable_resources:
+  base_url: ${WEBSITE_URL} 
+
+  url_templates:
+    article: /articles/{{article.id}}
+    category: /categories/{{category.name}}
+    tag:  /tags/{{tag.name}}
+
+  rss:
+    enable: true
+    title: ${WEBSITE_NAME}
+    description: ${WEBSITE_DESCRIPTION}
+    max_articles: 10
+
+  sitemap:
+    enable: true
+    extends: 
+      - { loc: / }
+
+auth:
+  jwt:
+    type: hs256
+    expiry: 72h
+    secret: ${JWT_SECRET}
+
+http_rate:
+  limit_per_ip: 100/s
+
+  black_list: [
+    '${HTTP_RATE_BLACK_LIST1}'
+  ]
+
+  high_quota_keys: [
+  ]
+
+db:
+  driver: sqlite3
+  
+  dsn: file:./sys/database.db?_foreign_keys=on
+
+log:
+  enable: true
+  log_level: info
+  lumberjack:
+    filename: ./sys/logs/latest.log
+    maxsize: 10
+    maxage: 30
+    maxbackups: 3
+    compress: true

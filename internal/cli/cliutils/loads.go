@@ -13,14 +13,14 @@ func LoadConfig(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 
 		configFile := ctx.String("config")
-		_, err := config.LoadConfig(configFile)
+		_, err := config.LoadConfigFromFile(configFile)
 		if os.IsNotExist(err) && !ctx.IsSet("config") {
 			err = assets.ExportDefaultConfig(configFile)
 			if err != nil {
 				return err
 			}
 
-			_, err = config.LoadConfig(configFile)
+			_, err = config.LoadConfigFromFile(configFile)
 			if err != nil {
 				return err
 			}
@@ -40,7 +40,7 @@ func ConnectDatabase(action cli.ActionFunc) cli.ActionFunc {
 		conf := config.Conf()
 
 		dbDriver := conf.Database.Driver
-		dsn := conf.Database.Dsn.String()
+		dsn := conf.Database.Dsn
 
 		err := data.ConnectDatabase(dbDriver, dsn)
 		if err != nil {

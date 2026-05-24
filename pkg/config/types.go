@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -50,33 +49,6 @@ func (e *TemplateString) Parse(transformer func(string) any) (string, error) {
 }
 
 func (e *TemplateString) String() string {
-	return string(*e)
-}
-
-type EnvVarResolver string
-
-func (e *EnvVarResolver) UnmarshalYAML(value *yaml.Node) error {
-	str := ""
-	err := value.Decode(&str)
-	if err != nil {
-		return err
-	}
-
-	result := bytes.NewBuffer([]byte{})
-
-	_, err = fasttemplate.ExecuteFunc(str, "${", "}", result, func(w io.Writer, tag string) (int, error) {
-		return fmt.Fprint(w, os.Getenv(tag))
-	})
-
-	if err != nil {
-		return err
-	}
-
-	*e = EnvVarResolver(result.String())
-	return nil
-}
-
-func (e *EnvVarResolver) String() string {
 	return string(*e)
 }
 

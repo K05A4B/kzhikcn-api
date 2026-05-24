@@ -56,7 +56,7 @@ func (q *RateLimit) UnmarshalYAML(value *yaml.Node) error {
 		return errors.Errorf("invalid unit: %s", unit)
 	}
 
-	q.Window = d * time.Duration(max)
+	q.Window = d
 	q.Max = int(max)
 
 	return nil

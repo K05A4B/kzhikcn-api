@@ -43,7 +43,7 @@ func GenerateSitemap(w io.Writer) error {
 
 	for _, item := range conf.Sitemap.Extends {
 		u := *SitemapExtend2Url(item)
-		u.Location = conf.BaseUrl.String() + u.Location
+		u.Location = conf.BaseUrl + u.Location
 		urls = append(urls, u)
 	}
 

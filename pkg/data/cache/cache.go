@@ -62,7 +62,7 @@ func initRedis(conf config.CacheRedisConf) error {
 	client := redis.NewClient(&redis.Options{
 		Addr:     conf.Addr,
 		Username: conf.Username,
-		Password: conf.Password.String(),
+		Password: conf.Password,
 	})
 
 	cache = &RedisCache{

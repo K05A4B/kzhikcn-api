@@ -38,7 +38,7 @@ func HttpRate() func(http.Handler) http.Handler {
 
 func (hrate *httpRate) preBuild(c *config.Config) {
 	for _, key := range c.HttpRate.HighQuotaKeys {
-		hrate.apiKeys[key.String()] = struct{}{}
+		hrate.apiKeys[key] = struct{}{}
 	}
 
 	for _, addr := range c.HttpRate.BlackList {
