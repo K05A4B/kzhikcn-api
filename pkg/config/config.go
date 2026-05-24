@@ -53,7 +53,6 @@ type MachineReadableResources struct {
 		Article  TemplateString `yaml:"article"`
 		Category TemplateString `yaml:"category"`
 		Tag      TemplateString `yaml:"tag"`
-		Friends  TemplateString `yaml:"friends"`
 	} `yaml:"url_templates"`
 
 	Rss struct {
