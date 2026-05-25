@@ -88,7 +88,9 @@ Content-Type: application/json
 
 **接口错误代码**
 
-- `articles.find_failed` 查询文章信息失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章信息失败 |
 
 ---
 
@@ -158,8 +160,10 @@ Content-Type: application/json
 
 **接口错误代码**
 
-- `articles.find_failed` 查询文章信息失败
-- `articles.not_found` 没有找到文章
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.not_found` | 没有找到文章 |
 
 ---
 
@@ -205,9 +209,11 @@ Content-Type: application/json
 
 **接口错误代码**
 
-- `articles.not_found` 没有找到文章
-- `articles.find_failed` 查询文章信息失败
-- `articles.views.update_failed` 更新浏览量失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.not_found` | 没有找到文章 |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.views.update_failed` | 更新浏览量失败 |
 
 ---
 
@@ -253,9 +259,11 @@ Content-Type: application/json
 
 **接口错误代码**
 
-- `articles.not_found` 没有找到文章
-- `articles.find_failed` 查询文章信息失败
-- `articles.likes.update_failed` 更新点赞量失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.not_found` | 没有找到文章 |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.likes.update_failed` | 更新点赞量失败 |
 
 ---
 
@@ -322,10 +330,12 @@ Content-Type: text/html; charset=utf-8
 
 **接口错误代码**
 
-- `articles.not_found` 没有找到文章
-- `articles.find_failed` 查询文章信息失败
-- `articles.content.not_found` 文章正文文件不存在
-- `articles.content.render_failed` 渲染文章正文失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.not_found` | 没有找到文章 |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.content.not_found` | 文章正文文件不存在 |
+| `articles.content.render_failed` | 渲染文章正文失败 |
 
 ---
 
@@ -355,12 +365,14 @@ GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets/img.jpg HTTP/1.
 
 **接口错误代码**：
 
-- `articles.not_found` 没有找到文章
-- `articles.find_failed` 查询文章信息失败
-- `articles.content.not_found` 文章正文文件不存在
-- `articles.assets.check_asset_failed`检查资源状态失败
-- `articles.assets.not_found`没有找到资源
-- `articles.assets.load_failed`加载资源失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.not_found` | 没有找到文章 |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.content.not_found` | 文章正文文件不存在 |
+| `articles.assets.check_asset_failed` | 检查资源状态失败 |
+| `articles.assets.not_found` | 没有找到资源 |
+| `articles.assets.load_failed` | 加载资源失败 |
 
 ---
 
@@ -440,7 +452,9 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章信息失败 |
 
 ---
 
@@ -526,9 +540,11 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.category_not_found`没有找到分类
-* `articles.create_failed`创建文章失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.category_not_found` | 没有找到分类 |
+| `articles.create_failed` | 创建文章失败 |
 
 ---
 
@@ -624,10 +640,12 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.not_found`没有找到文章
-* `articles.category_not_found`没有找到分类
-* `articles.update_failed`更新文章信息失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.not_found` | 没有找到文章 |
+| `articles.category_not_found` | 没有找到分类 |
+| `articles.update_failed` | 更新文章信息失败 |
 
 ---
 
@@ -695,10 +713,12 @@ Content-Type: text/plain
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.not_found`没有找到文章
-* `articles.content.not_found`没有找到文章正文
-* `articles.content.load_failed`加载文章正文失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.not_found` | 没有找到文章 |
+| `articles.content.not_found` | 没有找到文章正文 |
+| `articles.content.load_failed` | 加载文章正文失败 |
 
 ---
 
@@ -745,9 +765,11 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed` 查询文章信息失败
-* `articles.not_found`没有找到文章
-* `articles.content.write_failed`更新文章正文失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章信息失败 |
+| `articles.not_found` | 没有找到文章 |
+| `articles.content.write_failed` | 更新文章正文失败 |
 
 ---
 
@@ -795,8 +817,10 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.delete_failed`删除文章失败
-* `articles.clean_assets_failed`清除文章资源失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.delete_failed` | 删除文章失败 |
+| `articles.clean_assets_failed` | 清除文章资源失败 |
 
 ---
 
@@ -871,7 +895,9 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.find_failed`查询文章失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.find_failed` | 查询文章失败 |
 
 ---
 
@@ -918,7 +944,9 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-* `articles.restore_failed`恢复文章失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.restore_failed` | 恢复文章失败 |
 
 ---
 
@@ -963,7 +991,9 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-+ `articles.assets.list_failed`列出资源列表失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.assets.list_failed` | 列出资源列表失败 |
 
 ---
 
@@ -1017,13 +1047,12 @@ Content-Type: application/json
 
 **接口错误代码**：
 
-+ `articles.assets.file_missing`上传的负载中没有找到文件
-
-+ `articles.assets.invalid_filename`资源ID（文件名）不合法
-
-+ `articles.assets.filename_is_required`资源ID（文件名）是必须提供的
-
-+ `articles.assets.load_failed`加载资源失败
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.assets.file_missing` | 上传的负载中没有找到文件 |
+| `articles.assets.invalid_filename` | 资源ID（文件名）不合法 |
+| `articles.assets.filename_is_required` | 资源ID（文件名）是必须提供的 |
+| `articles.assets.load_failed` | 加载资源失败 |
 
 ---
 
@@ -1065,8 +1094,9 @@ Content-Type: application/json
 
   **接口错误代码**：
 
-+ `articles.delete_assets_failed`删除文章资源失败
-  
-  
+| 错误码 | 错误描述 |
+| :---- | :------- |
+| `articles.delete_assets_failed` | 删除文章资源失败 |
 
+  
 
