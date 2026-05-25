@@ -1,5 +1,14 @@
 # 自定义部署指南
 
+# 编译
+
+```bash
+git clone https://github.com/k05a4b/kzhikcn-api.git
+cd kzhikcn-api
+go mod download
+go build -o kzhikcn
+```
+
 ## 配置文件
 
 运行服务前需准备配置文件。执行 `./kzhikcn serve` 时会自动创建默认配置文件，也可通过 `./kzhikcn gen-config` 命令生成。添加 `-d` 参数可生成完整的默认配置文件：
