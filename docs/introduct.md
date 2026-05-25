@@ -173,6 +173,10 @@ Content-Type: application/json
 ## 接口列表
 
 + [权限认证](./api/auth.md)
+  + [登录流程](./api/auth.md#登录图)
+  + [登录接口](./api/auth.md#登录接口)
+  + [MFA验证接口(TOTP)](./api/auth.md#MFA验证接口(TOTP))
+
 + [文章相关接口](./api/articles.md)
   + [获取文章列表](./api/articles.md#获取文章列表)
   + [获取单篇文章信息](./api/articles.md#获取单篇文章信息)

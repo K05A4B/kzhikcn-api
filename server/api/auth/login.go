@@ -31,42 +31,6 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// 登录接口
-// POST /api/v1/auth/login
-//
-// 认证要求:
-//   - 无需认证
-//
-// 请求类型:
-//   - Content-Type: application/json
-//
-// 请求参数:
-//   - username (string, 必填): 用户名
-//     示例: "admin"
-//   - password (string, 必填): 密码
-//     示例: "123456"
-//
-// 响应数据:
-//
-//	data:
-//	  - status (string): 认证状态
-//	    - authorized: 登录成功
-//	    - needMFA: 需要进行多因素认证
-//
-//	  - token (string, 可选): Access Token
-//	    - 返回条件: status = authorized
-//
-//	  - challengeId (string, 可选): MFA 挑战 ID
-//	    - 返回条件: status = needMFA
-//	    - 有效期: 120 秒
-//			- 允许重试次数：5
-//	    - 说明: 过期后需重新登录获取
-//
-// 错误码:
-//   - auth.login.authentication_failed: 用户名或密码错误
-//   - auth.login.compare_password_failed: 密码校验异常
-//   - database.query_error: 数据库查询异常
-//   - auth.generate_token_failed: 生成Token失败
 var LoginHandler = hdl.NewHandler(
 	func(r *http.Request, resp *hdl.Response, payload LoginRequest) error {
 
