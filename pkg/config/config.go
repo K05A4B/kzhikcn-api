@@ -88,7 +88,9 @@ type CacheRedisConf struct {
 }
 
 type CacheLocalConf struct {
-	Dir string `yaml:"dir"`
+	Dir              string `yaml:"dir"`
+	ValueLogFileSize Size   `yaml:"value_log_file_size"`
+	MemTableSize     Size   `yaml:"mem_table_size"`
 }
 
 type CacheConf struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"kzhikcn/pkg/config"
+	"kzhikcn/pkg/log"
 	"strings"
 	"time"
 
@@ -37,7 +38,21 @@ func InitCache(c *config.Config) error {
 }
 
 func initBadger(conf config.CacheLocalConf) error {
-	db, err := badger.Open(badger.DefaultOptions(conf.Dir))
+	opt := badger.DefaultOptions(conf.Dir)
+	opt.ValueLogFileSize = conf.ValueLogFileSize.Int64()
+	opt.MemTableSize = conf.MemTableSize.Int64()
+
+	if opt.ValueLogFileSize == 0 {
+		opt.ValueLogFileSize = 64 * 1024 * 1024
+	}
+
+	if opt.MemTableSize == 0 {
+		opt.MemTableSize = 8 * 1024 * 1024
+	}
+
+	log.Debug(opt.ValueLogFileSize)
+
+	db, err := badger.Open(opt)
 	if err != nil {
 		return errors.Errorf("failed to open cache: %s", err)
 	}

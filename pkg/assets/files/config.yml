@@ -12,7 +12,9 @@ storage:
 cache:
   provider: local          # 缓存类型：local（内置缓存）或 redis
   local:
-    dir: ./sys/cache       # 本地缓存持久化目录
+    dir: ./sys/cache          # 本地缓存持久化目录
+    value_log_file_size: 64mb # 单个值日志文件大小 (默认 64mb)
+    mem_table_size: 8mb       # 内存表大小 (默认 8mb)
 
   # Redis 缓存配置（启用时需将 provider 设为 redis）
   redis:
