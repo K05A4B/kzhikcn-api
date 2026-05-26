@@ -15,6 +15,8 @@ func Version1() chi.Router {
 	r := chi.NewRouter()
 
 	r.Group(func(r chi.Router) {
+		r.Handle("/ping", hdl.New(PingHandler))
+
 		r.Post("/auth/login", hdl.New(auth.LoginHandler))
 		r.Post("/auth/mfa/totp", hdl.New(auth.VerifyTOTPHandler))
 

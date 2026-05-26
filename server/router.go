@@ -3,7 +3,6 @@ package server
 import (
 	"kzhikcn/server/api"
 	"kzhikcn/server/common/hdl"
-	"kzhikcn/server/common/httputil"
 	"kzhikcn/server/common/middlewares"
 	"net/http"
 
@@ -14,9 +13,7 @@ import (
 func NewRouter() chi.Router {
 	r := chi.NewRouter()
 
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		httputil.HttpError(404, nil, w, r, 0)
-	})
+	r.NotFound(hdl.New(NotFoundHandler))
 
 	// 从header中获取真实IP
 	// 从前到后依次是：
@@ -43,3 +40,7 @@ func NewRouter() chi.Router {
 
 	return r
 }
+
+var NotFoundHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+	return hdl.Error(http.StatusNotFound, "not found", nil, "system.not_found")
+})
