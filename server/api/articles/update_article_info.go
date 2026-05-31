@@ -10,7 +10,7 @@ import (
 
 var UpdateArticleInfoHandler = hdl.NewHandler(func(r *http.Request, resp *hdl.Response, payload data.EditableArticle) error {
 	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Select("id")
+		return tx.Preload("Tags").Preload("Category")
 	})
 	if err != nil {
 		return err
@@ -23,6 +23,8 @@ var UpdateArticleInfoHandler = hdl.NewHandler(func(r *http.Request, resp *hdl.Re
 	if err != nil {
 		return ErrUpdateArticleInfoFailed.Wrap(err)
 	}
+
+	resp.Data = article
 
 	return nil
 })
