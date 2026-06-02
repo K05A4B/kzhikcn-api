@@ -14,6 +14,7 @@ import (
 func Version1() chi.Router {
 	r := chi.NewRouter()
 
+	// 公共接口
 	r.Group(func(r chi.Router) {
 		r.Handle("/ping", hdl.New(PingHandler))
 
@@ -35,6 +36,7 @@ func Version1() chi.Router {
 		r.Get("/tags", hdl.New(topics.GetTagsHandler))                         // 获取标签列表
 	})
 
+	// 需要认证的接口
 	r.Group(func(r chi.Router) {
 		r.Use(middlewares.BearerAuth)
 		r.Post("/auth/logout", hdl.New(auth.LogoutHandler))
@@ -44,10 +46,31 @@ func Version1() chi.Router {
 		r.Post("/users/me/mfa/totp-secret", hdl.New(admin.GenerateTOTPSecretHandler)) // 为当前用户生成totp的密钥
 		r.Patch("/users/me", hdl.New(admin.UpdateAdminInfoHandler))
 		r.Put("/users/me/password", hdl.New(admin.ChangePasswordHandler))
-	})
 
-	// 管理员仅管理员调用的接口
-	r.Mount("/admin", v1Admin())
+		// 话题管理
+		r.Delete("/tags/batch-delete", hdl.New(topics.BatchDeleteTagsHandler)) //批量删除标签
+		r.Patch("/tags/{tag}", hdl.New(topics.UpdateTagHandler))
+		r.Post("/categories", hdl.New(topics.CreateCategoryHandler))
+		r.Patch("/categories/{category}", hdl.New(topics.UpdateCategoryHandler))
+		r.Delete("/categories/batch-delete", hdl.New(topics.DeleteCategoryHandler))
+
+		// 文章管理
+		r.Get("/articles/trash-bin", hdl.New(articles.GetDeletedArticlesHandler))      // 查找所有被软删除的文章
+		r.Post("/articles/trash-bin/restore", hdl.New(articles.RestoreArticleHandler)) // 批量恢复软删除的文章
+
+		r.Post("/articles", hdl.New(articles.CreateArticleHandler))                      // 创建文章
+		r.Delete("/articles/batch-delete", hdl.New(articles.BatchDeleteArticlesHandler)) // 批量删除文章
+		r.Patch("/articles/{article_id}", hdl.New(articles.UpdateArticleInfoHandler))    // 更新文章信息
+
+		// 文章内容（子资源）
+		r.Get("/articles/{article_id}/raw-content", hdl.New(articles.GetArticleContentHandler))       // 获取文章原始内容
+		r.Put("/articles/{article_id}/raw-content", hdl.New(articles.UpdateArticleRawContentHandler)) // 更新更新原始内容
+
+		// 文章资源（子资源）
+		r.Get("/articles/{article_id}/assets", hdl.New(articles.ListArticleAssetsHandler))                // 获取已上传的资源列表
+		r.Post("/articles/{article_id}/assets", hdl.New(articles.UploadArticleAssetHandler))              // 上传资源
+		r.Delete("/articles/{article_id}/assets/{asset_id}", hdl.New(articles.DeleteArticleAssetHandler)) // 删除资源
+	})
 
 	return r
 }
@@ -56,29 +79,5 @@ func v1Admin() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middlewares.BearerAuth)
 
-	// 文章管理
-	r.Get("/articles", hdl.New(articles.AdminGetArticlesHandler))                  // 查询文章列表
-	r.Get("/articles/trash-bin", hdl.New(articles.GetDeletedArticlesHandler))      // 查找所有被软删除的文章
-	r.Post("/articles/trash-bin/restore", hdl.New(articles.RestoreArticleHandler)) // 批量恢复软删除的文章
-
-	r.Post("/articles", hdl.New(articles.CreateArticleHandler))                      // 创建文章
-	r.Delete("/articles/batch-delete", hdl.New(articles.BatchDeleteArticlesHandler)) // 批量删除文章
-	r.Patch("/articles/{article_id}", hdl.New(articles.UpdateArticleInfoHandler))    // 更新文章信息
-
-	// 文章内容（子资源）
-	r.Get("/articles/{article_id}/raw-content", hdl.New(articles.GetArticleContentHandler))       // 获取文章原始内容
-	r.Put("/articles/{article_id}/raw-content", hdl.New(articles.UpdateArticleRawContentHandler)) // 更新更新原始内容
-
-	// 文章资源（子资源）
-	r.Get("/articles/{article_id}/assets", hdl.New(articles.ListArticleAssetsHandler))                // 获取已上传的资源列表
-	r.Post("/articles/{article_id}/assets", hdl.New(articles.UploadArticleAssetHandler))              // 上传资源
-	r.Delete("/articles/{article_id}/assets/{asset_id}", hdl.New(articles.DeleteArticleAssetHandler)) // 删除资源
-
-	// 话题管理
-	r.Post("/tags/batch-delete", hdl.New(topics.BatchDeleteTagsHandler)) //批量删除标签
-	r.Patch("/tags/{tag}", hdl.New(topics.UpdateTagHandler))
-	r.Post("/categories", hdl.New(topics.CreateCategoryHandler))
-	r.Patch("/categories/{category}", hdl.New(topics.UpdateCategoryHandler))
-	r.Delete("/categories/{category}", hdl.New(topics.DeleteCategoryHandler))
 	return r
 }

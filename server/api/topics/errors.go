@@ -3,7 +3,8 @@ package topics
 import "kzhikcn/server/common/hdl"
 
 var (
-	ErrTagDeleteIdIsRequired                = hdl.DefineError(400, "请提提供要删除的tag的id (ids)", "topics.tags.delete.ids_is_empty")
+	ErrTagDeleteIdIsRequired                = hdl.DefineError(400, "请提提供要删除的标签的id (ids)", "topics.tags.delete.ids_is_empty")
+	ErrCategoryDeleteIdIsRequired           = hdl.DefineError(400, "请提提供要删除的分类的id (ids)", "topics.categories.delete.ids_is_empty")
 	ErrCategoryCreateCategoryNameIsRequired = hdl.DefineError(400, "主题名字为必填项 (categoryName)", "topics.categories.create.category_name_is_required")
 
 	ErrTagDeleteFailed      = hdl.DefineError(500, "删除标签失败", "topics.tags.delete_failed")

@@ -8,14 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
-var DeleteCategoryHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	category, err := getCategoryBase(r)
-	if err != nil {
-		return err
-	}
-
-	err = data.DeleteCategories(func(tx *gorm.DB) *gorm.DB {
-		return tx.Where("id=?", category.ID)
+var DeleteCategoryHandler = hdl.NewHandler(func(r *http.Request, resp *hdl.Response, payload BatchDeleteTopicsRequest) error {
+	err := data.DeleteCategories(func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("id IN ?", payload.IDs)
 	})
 
 	if err != nil {
@@ -23,4 +18,8 @@ var DeleteCategoryHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl
 	}
 
 	return nil
-})
+},
+	hdl.When(func(payload BatchDeleteTopicsRequest) bool {
+		return len(payload.IDs) == 0
+	}, ErrCategoryDeleteIdIsRequired),
+)

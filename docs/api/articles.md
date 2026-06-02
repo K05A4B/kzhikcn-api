@@ -2,13 +2,13 @@
 
 ## 获取文章列表
 
-查询状态为`published`的文章列表
+在没认证的情况下只能查询状态为`published`的文章列表，认证后可以查询所有文章列表
 
 ```
 GET /api/v1/articles
 ```
 
-**认证**：无需认证
+**认证**：无需认证（可认证）
 
 **查询参数**：
 
@@ -17,6 +17,12 @@ GET /api/v1/articles
 | page    | 整数  | 页码                  | 1                  |
 | limit   | 整数  | 每页数量，最大值为 100       | 20                 |
 | orderBy | 字符串 | 排序字段，格式为 `字段名:排序方向` | "publishedAt:desc" |
+| expr    | 字符串 | 认证后可以使用，请参考[查询条件表达式](../introduct.md#查询条件表达式) | - |
+
+> !note
+> 此接口支持查询条件表达式
+> 在白名单中的字段包含：
+> `id`, `status`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`,`update_at`, `published_at`, `status`
 
 **排序字段说明**：
 
@@ -376,94 +382,12 @@ GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets/img.jpg HTTP/1.
 
 ---
 
-## 获取文章列表（管理员）
-
-获取文章列表，和公共的相比可以查询到任意状态的文章
-
-```
-GET /api/v1/admin/articles
-```
-
-**认证**：需要 JWT 认证
-
-**查询参数**：
-
-> !note
-> 此接口支持查询条件表达式
-> 在白名单中的字段包含：
-> `id`, `status`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`,`update_at`, `published_at`, `status`
-
-- 与公共接口相同，可额外使用 `expr` 参数使用[查询条件表达式](../introduct.md#查询条件表达式)
-  **请求示例**：
-
-```http
-GET /api/v1/admin/articles HTTP/1.1
-Authorization: Bearer <token>
-```
-
-**响应示例**：
-
-```json
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-    "success": true,
-    "code": 200,
-    "message": "",
-    "data": [
-        {
-            "id": "4bfbb387-b3fb-4b0f-a4a5-8cb7c7d667ac",
-            "createdAt": "2026-04-10T22:03:10.9258348+08:00",
-            "updatedAt": "2026-04-10T22:03:10.9258348+08:00",
-            "publishedAt": null,
-            "customID": "draft_1",
-            "title": "草稿文章1",
-            "views": 0,
-            "likes": 0,
-            "categoryID": 10,
-            "category": {
-                "id": 10,
-                "categoryName": "分类10",
-                "description": "分类10的描述"
-            },
-            "tags": [
-                {
-                    "id": 9,
-                    "tagName": "草稿"
-                },
-                {
-                    "id": 10,
-                    "tagName": "待编辑"
-                }
-            ],
-            "status": "draft",
-            "description": "这是草稿文章1",
-            "coverImage": "",
-            "enableComment": false
-        }
-    ],
-    "meta": {
-        "count": 1,
-        "total": 15
-    }
-}
-```
-
-**接口错误代码**：
-
-| 错误码 | 错误描述 |
-| :---- | :------- |
-| `articles.find_failed` | 查询文章信息失败 |
-
----
-
 ## 创建文章
 
 创建文章
 
 ```
-POST /api/v1/admin/articles
+POST /api/v1/articles
 ```
 
 **认证**：需要 JWT 认证
@@ -484,7 +408,7 @@ POST /api/v1/admin/articles
 **请求示例**：
 
 ```http
-POST /api/v1/admin/articles HTTP/1.1
+POST /api/v1/articles HTTP/1.1
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -551,7 +475,7 @@ Content-Type: application/json
 ## 更新文章信息
 
 ```
-PATCH /api/v1/admin/articles/{article_id}
+PATCH /api/v1/articles/{article_id}
 ```
 
 **认证**：需要 JWT 认证
@@ -582,7 +506,7 @@ PATCH /api/v1/admin/articles/{article_id}
 **请求示例**：
 
 ```http
-PATCH /api/v1/admin/articles/651227b9-ae18-41dc-b326-f21a8e331ce1 HTTP/1.1
+PATCH /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1 HTTP/1.1
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -654,7 +578,7 @@ Content-Type: application/json
 获取文章的原始内容（Markdown），支持 JSON 格式和markdown格式响应
 
 ```
-GET /api/v1/admin/articles/{article_id}/raw-content
+GET /api/v1/articles/{article_id}/raw-content
 ```
 
 **认证**：需要 JWT 认证
@@ -668,7 +592,7 @@ GET /api/v1/admin/articles/{article_id}/raw-content
 **JSON 格式请求**：
 
 ```http
-GET /api/v1/admin/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
+GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
 Authorization: Bearer <token>
 Accept: application/json
 ```
@@ -676,7 +600,7 @@ Accept: application/json
 **Markdown 格式请求**：
 
 ```http
-GET /api/v1/admin/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
+GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
 Authorization: Bearer <token>
 Accept: text/plain
 ```
@@ -725,7 +649,7 @@ Content-Type: text/plain
 ## 更新文章内容
 
 ```
-PUT /api/v1/admin/articles/{article_id}/raw-content
+PUT /api/v1/articles/{article_id}/raw-content
 ```
 
 **认证**：需要 JWT 认证
@@ -739,7 +663,7 @@ PUT /api/v1/admin/articles/{article_id}/raw-content
 **请求示例**：
 
 ```http
-PUT /api/v1/admin/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
+PUT /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
 Authorization: Bearer <token>
 Content-Type: text/plain
 
@@ -776,7 +700,7 @@ Content-Type: application/json
 ## 批量删除文章
 
 ```
-DELETE /api/v1/admin/articles/batch-delete
+DELETE /api/v1/articles/batch-delete
 ```
 
 **认证**：需要 JWT 认证
@@ -791,7 +715,7 @@ DELETE /api/v1/admin/articles/batch-delete
 **请求示例**：
 
 ```http
-DELETE /api/v1/admin/articles/batch-delete HTTP/1.1
+DELETE /api/v1/articles/batch-delete HTTP/1.1
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -827,7 +751,7 @@ Content-Type: application/json
 ## 获取已删除的文章列表
 
 ```
-GET /api/v1/admin/articles/trash-bin
+GET /api/v1/articles/trash-bin
 ```
 
 > !note
@@ -840,7 +764,7 @@ GET /api/v1/admin/articles/trash-bin
 **请求示例**：
 
 ```http
-GET /api/v1/admin/articles/trash-bin HTTP/1.1
+GET /api/v1/articles/trash-bin HTTP/1.1
 Authorization: Bearer <token>
 ```
 
@@ -904,7 +828,7 @@ Content-Type: application/json
 ## 恢复已删除的文章
 
 ```
-POST /api/v1/admin/articles/trash-bin/restore
+POST /api/v1/articles/trash-bin/restore
 ```
 
 **认证**：需要 JWT 认证
@@ -918,7 +842,7 @@ POST /api/v1/admin/articles/trash-bin/restore
 **请求示例**：
 
 ```http
-POST /api/v1/admin/articles/trash-bin/restore HTTP/1.1
+POST /api/v1/articles/trash-bin/restore HTTP/1.1
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -953,7 +877,7 @@ Content-Type: application/json
 ## 获取文章资源列表
 
 ```
-GET /api/v1/admin/articles/{article_id}/assets
+GET /api/v1/articles/{article_id}/assets
 ```
 
 **认证**：需要 JWT 认证
@@ -965,7 +889,7 @@ GET /api/v1/admin/articles/{article_id}/assets
 **请求示例**：
 
 ```http
-GET /api/v1/admin/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets HTTP/1.1
+GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets HTTP/1.1
 Authorization: Bearer <token>
 ```
 
@@ -1000,7 +924,7 @@ Content-Type: application/json
 ## 上传文章资源
 
 ```
-POST /api/v1/admin/articles/{article_id}/assets
+POST /api/v1/articles/{article_id}/assets
 ```
 
 **认证**：需要 JWT 认证
@@ -1017,7 +941,7 @@ POST /api/v1/admin/articles/{article_id}/assets
 **请求示例**：
 
 ```http
-POST /api/v1/admin/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets HTTP/1.1
+POST /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets HTTP/1.1
 Host: example.com
 Authorization: Bearer <token>
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
@@ -1059,7 +983,7 @@ Content-Type: application/json
 ## 删除文章资源
 
 ```
-DELETE /api/v1/admin/articles/{article_id}/assets/{asset_id}
+DELETE /api/v1/articles/{article_id}/assets/{asset_id}
 ```
 
 **认证**：需要 JWT 认证
@@ -1072,7 +996,7 @@ DELETE /api/v1/admin/articles/{article_id}/assets/{asset_id}
 **请求示例**：
 
 ```http
-DELETE /api/v1/admin/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets/image1.jpg HTTP/1.1
+DELETE /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets/image1.jpg HTTP/1.1
 Host: example.com
 Authorization: Bearer <token>
 ```
