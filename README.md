@@ -23,7 +23,7 @@ kzhikcn-api 是一个基于 Go 语言开发的简单的无头内容管理系统�
 
 ## API 文档
 
-[API 文档](./docs/introduct.md)
+[API 文档](./docs/introduction.md)
 
 ## 许可协议 / LICENSE
 

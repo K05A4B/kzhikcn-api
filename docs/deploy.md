@@ -1,6 +1,6 @@
 # 自定义部署指南
 
-# 编译
+## 编译
 
 ```bash
 git clone https://github.com/k05a4b/kzhikcn-api.git
@@ -135,7 +135,7 @@ log:
 ./kzhikcn serve
 ```
 
-默认使用 `./config.yml` 作为配置文件，监听 `0.0.0.0:5803` 端口。
+默认使用 `./config.yml` 作为配置文件，监听 `0.0.0.0:5083` 端口。
 
 ### 指定配置文件
 
@@ -150,7 +150,7 @@ log:
 使用 `-a` 参数指定服务监听地址：
 
 ```bash
-./kzhikcn serve -a 100.65.10.13:5803
+./kzhikcn serve -a 100.65.10.13:5083
 ```
 
 ### 组合使用
