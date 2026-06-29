@@ -30,7 +30,7 @@ const (
 
 type EditableArticle struct {
 	Title         string        `json:"title"`
-	CustomID      string        `json:"customId"`
+	CustomID      string        `json:"customID"`
 	Category      string        `json:"category"`
 	Tags          []string      `json:"tags"`
 	Status        ArticleStatus `json:"status"`

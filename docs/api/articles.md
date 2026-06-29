@@ -2,40 +2,42 @@
 
 ## 获取文章列表
 
-在没认证的情况下只能查询状态为`published`的文章列表，认证后可以查询所有文章列表
+未认证时只能查询 `published` 状态的文章列表，认证后可查询所有状态的。
 
 ```
 GET /api/v1/articles
 ```
 
-**认证**：无需认证（可认证）
+**认证**：可选（携带 JWT Token 可查询所有状态，否则仅 `published`）
 
 **查询参数**：
 
-| 参数名     | 类型  | 描述                  | 默认值                |
-| ------- | --- | ------------------- | ------------------ |
-| page    | 整数  | 页码                  | 1                  |
-| limit   | 整数  | 每页数量，最大值为 100       | 20                 |
-| orderBy | 字符串 | 排序字段，格式为 `字段名:排序方向` | "publishedAt:desc" |
-| expr    | 字符串 | 认证后可以使用，请参考[查询条件表达式](../introduct.md#查询条件表达式) | - |
+| 参数名    | 类型   | 描述                                       | 默认值                   |
+| --------- | ------ | ------------------------------------------ | ------------------------ |
+| page      | 整数   | 页码                                       | 1                        |
+| limit     | 整数   | 每页数量，最大值为 100                     | 20                       |
+| orderBy   | 字符串 | 排序字段，格式为 `字段名` 或 `字段名:desc` | `publishedAt:desc`       |
+| expr      | 字符串 | 查询条件表达式（认证后方可使用 `status` 字段） | -                        |
 
-> !note
-> 此接口支持查询条件表达式
-> 在白名单中的字段包含：
-> `id`, `status`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`,`update_at`, `published_at`, `status`
+> [!note]
+> 此接口支持查询条件表达式（`expr` 参数）。
+> 白名单字段：`id`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`, `update_at`, `published_at`
+> 认证后额外允许：`status`
 
 **排序字段说明**：
 
-- `publishedAt` - 按发布时间升序排序
-- `createdAt` - 按创建时间升序排序
-- `updatedAt` - 按更新时间升序排序
-- `likes` - 按点赞数升序排序
-- `views` - 按查看数升序排序
-- `publishedAt:desc` - 按发布时间降序排序
-- `createdAt:desc` - 按创建时间降序排序
-- `updatedAt:desc` - 按更新时间降序排序
-- `likes:desc` - 按点赞数降序排序
-- `views:desc` - 按查看数降序排序
+| 排序值               | 效果             |
+| -------------------- | ---------------- |
+| `publishedAt`        | 按发布时间升序   |
+| `publishedAt:desc`   | 按发布时间降序   |
+| `createdAt`          | 按创建时间升序   |
+| `createdAt:desc`     | 按创建时间降序   |
+| `updatedAt`          | 按更新时间升序   |
+| `updatedAt:desc`     | 按更新时间降序   |
+| `likes`              | 按点赞数升序     |
+| `likes:desc`         | 按点赞数降序     |
+| `views`              | 按浏览量升序     |
+| `views:desc`         | 按浏览量降序     |
 
 **请求示例**：
 
@@ -70,14 +72,8 @@ Content-Type: application/json
         "description": "分类1的描述"
       },
       "tags": [
-        {
-          "id": 15,
-          "tagName": "隐藏"
-        },
-        {
-          "id": 20,
-          "tagName": "备用"
-        }
+        { "id": 15, "tagName": "隐藏" },
+        { "id": 20, "tagName": "备用" }
       ],
       "status": "published",
       "description": "文章1的描述",
@@ -92,17 +88,17 @@ Content-Type: application/json
 }
 ```
 
-**接口错误代码**
+**接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.find_failed` | 查询文章信息失败 |
 
 ---
 
 ## 获取单篇文章信息
 
-查询状态为`published`和`hidden`的某篇文章的信息，如果没有找到相应的文章，则响应404
+查询状态为 `published` 和 `hidden` 的某篇文章信息。
 
 ```
 GET /api/v1/articles/{article_id}
@@ -112,7 +108,7 @@ GET /api/v1/articles/{article_id}
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID（CustomID）
 
 **请求示例**：
 
@@ -146,14 +142,8 @@ Content-Type: application/json
       "description": "分类1的描述"
     },
     "tags": [
-      {
-        "id": 15,
-        "tagName": "隐藏"
-      },
-      {
-        "id": 20,
-        "tagName": "备用"
-      }
+      { "id": 15, "tagName": "隐藏" },
+      { "id": 20, "tagName": "备用" }
     ],
     "status": "published",
     "description": "文章1的描述",
@@ -164,18 +154,21 @@ Content-Type: application/json
 }
 ```
 
-**接口错误代码**
+> [!note]
+> 当文章没有分类时，`category` 字段返回 `{"id": 0, "categoryName": "", "description": ""}`，`categoryID` 为 `null`。
+
+**接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.find_failed` | 查询文章信息失败 |
-| `articles.not_found` | 没有找到文章 |
+| `articles.not_found`  | 没有找到文章 |
 
 ---
 
 ## 增加文章浏览量
 
-增加某篇状态为`published`、`hidden`的文章的浏览量
+增加某篇 `published` 或 `hidden` 状态文章的浏览量。
 
 ```
 POST /api/v1/articles/{article_id}/view
@@ -185,7 +178,7 @@ POST /api/v1/articles/{article_id}/view
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
 
 **请求示例**：
 
@@ -207,16 +200,16 @@ Content-Type: application/json
   "code": 200,
   "message": "",
   "data": {
-    "views": 1 // 响应的是当前浏览量
+    "views": 1
   },
   "meta": {}
 }
 ```
 
-**接口错误代码**
+**接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.not_found` | 没有找到文章 |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.views.update_failed` | 更新浏览量失败 |
@@ -225,7 +218,7 @@ Content-Type: application/json
 
 ## 增加文章点赞量
 
-增加某篇状态为`published`、`hidden`的文章的点赞量
+增加某篇 `published` 或 `hidden` 状态文章的点赞量。
 
 ```
 POST /api/v1/articles/{article_id}/like
@@ -235,7 +228,7 @@ POST /api/v1/articles/{article_id}/like
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
 
 **请求示例**：
 
@@ -257,16 +250,16 @@ Content-Type: application/json
   "code": 200,
   "message": "",
   "data": {
-    "likes": 1 // 响应的是当前点赞量
+    "likes": 1
   },
   "meta": {}
 }
 ```
 
-**接口错误代码**
+**接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.not_found` | 没有找到文章 |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.likes.update_failed` | 更新点赞量失败 |
@@ -275,32 +268,34 @@ Content-Type: application/json
 
 ## 获取渲染后的文章内容
 
+获取 `published` 和 `hidden` 状态文章的 HTML 渲染内容，支持 JSON 和纯 HTML 两种响应格式。
+
 ```
 GET /api/v1/articles/{article_id}/content
 ```
-
-获取渲染后的状态为`published`和`hidden`的文章内容，支持 JSON 和 HTML 格式响应
 
 **认证**：无需认证
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
 
 **请求头**：
 
-- `Accept` - 响应格式，支持 `application/json`（默认）和 `text/html`
+- `Accept` - 响应格式：
+  - `application/json`（默认）：返回 JSON 包裹的 HTML
+  - `text/html`：直接返回 HTML
 
 **请求示例**：
 
-**JSON 格式请求**：
+JSON 格式：
 
 ```http
 GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/content HTTP/1.1
 Accept: application/json
 ```
 
-**HTML 格式请求**：
+HTML 格式：
 
 ```http
 GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/content HTTP/1.1
@@ -309,7 +304,7 @@ Accept: text/html
 
 **响应示例**：
 
-**JSON 格式响应**：
+JSON 格式：
 
 ```json
 HTTP/1.1 200 OK
@@ -324,7 +319,7 @@ Content-Type: application/json
 }
 ```
 
-**HTML 格式响应**：
+HTML 格式：
 
 ```html
 HTTP/1.1 200 OK
@@ -334,10 +329,10 @@ Content-Type: text/html; charset=utf-8
 <p>文章内容</p>
 ```
 
-**接口错误代码**
+**接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.not_found` | 没有找到文章 |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.content.not_found` | 文章正文文件不存在 |
@@ -347,6 +342,8 @@ Content-Type: text/html; charset=utf-8
 
 ## 获取文章资源
 
+获取某篇文章的附属资源文件（图片、附件等）。
+
 ```
 GET /api/v1/articles/{article_id}/assets/{asset_id}
 ```
@@ -355,8 +352,8 @@ GET /api/v1/articles/{article_id}/assets/{asset_id}
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
-- `asset_id` - 资源 ID
+- `article_id` - 文章 UUID 或自定义 ID
+- `asset_id` - 资源文件名
 
 **请求示例**：
 
@@ -366,13 +363,13 @@ GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets/img.jpg HTTP/1.
 
 **响应**：
 
-- 成功：返回资源文件（如图片、文件等）
+- 成功：返回资源文件内容（自动检测 MIME 类型）
 - 失败：返回 JSON 格式错误信息
 
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.not_found` | 没有找到文章 |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.content.not_found` | 文章正文文件不存在 |
@@ -384,8 +381,6 @@ GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets/img.jpg HTTP/1.
 
 ## 创建文章
 
-创建文章
-
 ```
 POST /api/v1/articles
 ```
@@ -394,16 +389,16 @@ POST /api/v1/articles
 
 **请求体参数**：
 
-| 字段名           | 类型  | 必填    | 描述                           | 默认值   |
-| ------------- | --- | ----- | ---------------------------- | ----- |
-| title         | 字符串 | **是** | 文章标题                         | 无     |
-| customID      | 字符串 | 否     | 自定义文章ID                      | 文章ID  |
-| description   | 字符串 | 否     | 文章描述                         | -     |
-| coverImage    | 字符串 | 否     | 封面图片URL                      | -     |
-| category      | 字符串 | 否     | 文章分类名字（必须存在对应的分类）            | -     |
-| tags          | 数组  | 否     | 文章标签列表                       | []    |
-| enableComment | 布尔值 | 否     | 是否启用评论                       | false |
-| status        | 字符串 | 否     | 文章状态（published/draft/hidden） | draft |
+| 字段名         | 类型   | 必填 | 描述                                      | 默认值   |
+| -------------- | ------ | ---- | ----------------------------------------- | -------- |
+| title          | 字符串 | **是** | 文章标题                                  | 无       |
+| customID       | 字符串 | 否   | 自定义 ID                                 | 自动生成 |
+| description    | 字符串 | 否   | 文章描述                                  | ""       |
+| coverImage     | 字符串 | 否   | 封面图片 URL                              | ""       |
+| category       | 字符串 | 否   | 分类名称（必须已存在）                     | -        |
+| tags           | 数组   | 否   | 标签名称列表，不存在则自动创建             | `[]`     |
+| enableComment  | 布尔值 | 否   | 是否启用评论                              | `false`  |
+| status         | 字符串 | 否   | 状态：`published` / `draft` / `hidden`     | `draft`  |
 
 **请求示例**：
 
@@ -432,7 +427,7 @@ Content-Type: application/json
     "id": "651227b9-ae18-41dc-b326-f21a8e331ce1",
     "createdAt": "2026-04-20T10:23:31.0541106+08:00",
     "updatedAt": "2026-04-20T10:23:31.0541106+08:00",
-    "publishedAt": "2026-04-20T10:23:31.0541106+08:00",
+    "publishedAt": null,
     "customID": "651227b9-ae18-41dc-b326-f21a8e331ce1",
     "title": "新文章",
     "views": 0,
@@ -444,14 +439,8 @@ Content-Type: application/json
       "description": ""
     },
     "tags": [
-      {
-        "id": 1,
-        "tagName": "技术"
-      },
-      {
-        "id": 2,
-        "tagName": "教程"
-      }
+      { "id": 1, "tagName": "技术" },
+      { "id": 2, "tagName": "教程" }
     ],
     "status": "draft",
     "description": "",
@@ -462,10 +451,13 @@ Content-Type: application/json
 }
 ```
 
+> [!note]
+> 当 `status` 设为 `published` 时，`publishedAt` 会自动填充为当前时间。
+
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.category_not_found` | 没有找到分类 |
 | `articles.create_failed` | 创建文章失败 |
@@ -482,26 +474,24 @@ PATCH /api/v1/articles/{article_id}
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
 
 **请求体参数**：
 
-> !note
-> 
-> 空值表示不修改
-> 
-> tags字段的空值为`null`，如果tags字段为`[]`则意为删除所有标签
+> [!note]
+> 空字符串表示不修改该字段。
+> `tags` 字段传空数组 `[]` 表示清空所有标签；传 `null` 表示不修改标签。
 
-| 字段名           | 类型  | 必填  | 描述                           |
-| ------------- | --- | --- | ---------------------------- |
-| title         | 字符串 | 否   | 文章标题                         |
-| customID      | 字符串 | 否   | 自定义文章ID                      |
-| description   | 字符串 | 否   | 文章描述                         |
-| coverImage    | 字符串 | 否   | 封面图片URL                      |
-| category      | 字符串 | 否   | 文章分类名字（必须存在对应的分类）            |
-| tags          | 数组  | 否   | 文章标签列表                       |
-| enableComment | 布尔值 | 否   | 是否启用评论                       |
-| status        | 字符串 | 否   | 文章状态（published/draft/hidden） |
+| 字段名         | 类型   | 必填 | 描述                                  |
+| -------------- | ------ | ---- | ------------------------------------- |
+| title          | 字符串 | 否   | 文章标题                              |
+| customID       | 字符串 | 否   | 自定义 ID                             |
+| description    | 字符串 | 否   | 文章描述                              |
+| coverImage     | 字符串 | 否   | 封面图片 URL                          |
+| category       | 字符串 | 否   | 分类名称（必须已存在）                 |
+| tags           | 数组   | 否   | 标签名称列表，`[]` 清空，`null` 不修改 |
+| enableComment  | 布尔值 | 否   | 是否启用评论                          |
+| status         | 字符串 | 否   | 状态：`published` / `draft` / `hidden` |
 
 **请求示例**：
 
@@ -544,14 +534,8 @@ Content-Type: application/json
       "description": ""
     },
     "tags": [
-      {
-        "id": 1,
-        "tagName": "技术"
-      },
-      {
-        "id": 3,
-        "tagName": "新标签"
-      }
+      { "id": 1, "tagName": "技术" },
+      { "id": 3, "tagName": "新标签" }
     ],
     "status": "published",
     "description": "",
@@ -565,7 +549,7 @@ Content-Type: application/json
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.not_found` | 没有找到文章 |
 | `articles.category_not_found` | 没有找到分类 |
@@ -573,9 +557,9 @@ Content-Type: application/json
 
 ---
 
-## 获取文章内容
+## 获取文章原始内容
 
-获取文章的原始内容（Markdown），支持 JSON 格式和markdown格式响应
+获取文章的原始 Markdown 内容，支持 JSON 和纯文本格式。
 
 ```
 GET /api/v1/articles/{article_id}/raw-content
@@ -585,11 +569,17 @@ GET /api/v1/articles/{article_id}/raw-content
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
+
+**请求头**：
+
+- `Accept` - 响应格式：
+  - `application/json`（默认）：返回 JSON 包裹的 Markdown
+  - `text/plain`：直接返回 Markdown 原文
 
 **请求示例**：
 
-**JSON 格式请求**：
+JSON 格式：
 
 ```http
 GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
@@ -597,7 +587,7 @@ Authorization: Bearer <token>
 Accept: application/json
 ```
 
-**Markdown 格式请求**：
+纯文本格式：
 
 ```http
 GET /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/raw-content HTTP/1.1
@@ -607,7 +597,7 @@ Accept: text/plain
 
 **响应示例**：
 
-**JSON 格式请求**：
+JSON 格式：
 
 ```json
 HTTP/1.1 200 OK
@@ -617,14 +607,12 @@ Content-Type: application/json
   "success": true,
   "code": 200,
   "message": "",
-  "data": {
-    "content": "# 文章标题\n\n文章内容"
-  },
+  "data": "# 文章标题\n\n文章内容",
   "meta": {}
 }
 ```
 
-**Markdown 格式请求**：
+纯文本格式：
 
 ```http
 HTTP/1.1 200 OK
@@ -638,7 +626,7 @@ Content-Type: text/plain
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.not_found` | 没有找到文章 |
 | `articles.content.not_found` | 没有找到文章正文 |
@@ -646,7 +634,9 @@ Content-Type: text/plain
 
 ---
 
-## 更新文章内容
+## 更新文章原始内容
+
+更新文章的原始 Markdown 内容。
 
 ```
 PUT /api/v1/articles/{article_id}/raw-content
@@ -656,9 +646,9 @@ PUT /api/v1/articles/{article_id}/raw-content
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
 
-**请求体**：正文文本
+**请求体**：原始 Markdown 文本（`Content-Type: text/plain`）
 
 **请求示例**：
 
@@ -690,7 +680,7 @@ Content-Type: application/json
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.find_failed` | 查询文章信息失败 |
 | `articles.not_found` | 没有找到文章 |
 | `articles.content.write_failed` | 更新文章正文失败 |
@@ -699,18 +689,20 @@ Content-Type: application/json
 
 ## 批量删除文章
 
+支持软删除和硬删除。软删除可恢复，硬删除会同时清除资源文件且不可恢复。
+
 ```
 DELETE /api/v1/articles/batch-delete
 ```
 
 **认证**：需要 JWT 认证
 
-**请求体**：
+**请求体参数**：
 
-| 字段         | 类型       | 必填    | 描述                      | 默认值   |
-| ---------- | -------- | ----- | ----------------------- | ----- |
-| ids        | []string | **是** | 要删除的文章ID（不能是自定义id）      | -     |
-| hardDelete | bool     | 否     | 硬删除（直接删除文章和其附带的资源，无法恢复） | false |
+| 字段       | 类型       | 必填   | 描述                                            | 默认值    |
+| ---------- | ---------- | ------ | ----------------------------------------------- | --------- |
+| ids        | `[]string` | **是** | 文章 UUID 列表（不支持自定义 ID）               | -         |
+| hardDelete | bool       | 否     | 是否硬删除（直接删除文章和资源文件，不可恢复）  | `false`   |
 
 **请求示例**：
 
@@ -742,7 +734,7 @@ Content-Type: application/json
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.delete_failed` | 删除文章失败 |
 | `articles.clean_assets_failed` | 清除文章资源失败 |
 
@@ -750,16 +742,27 @@ Content-Type: application/json
 
 ## 获取已删除的文章列表
 
+获取所有被软删除的文章。
+
 ```
 GET /api/v1/articles/trash-bin
 ```
 
-> !note
-> 此接口支持查询条件表达式
-> 在白名单中的字段包含：
-> `id`, `status`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`,`update_at`, `published_at`, `status`
-
 **认证**：需要 JWT 认证
+
+**查询参数**：
+
+| 参数名  | 类型   | 描述                             | 默认值               |
+| ------- | ------ | -------------------------------- | -------------------- |
+| page    | 整数   | 页码                             | 1                    |
+| limit   | 整数   | 每页数量，最大值为 100           | 20                   |
+| orderBy | 字符串 | 排序字段，格式同文章列表         | `publishedAt:desc`   |
+| expr    | 字符串 | 查询条件表达式                   | -                    |
+
+> [!note]
+> 此接口支持查询条件表达式。
+> 白名单字段与[获取文章列表](#获取文章列表)相同：
+> `id`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`, `update_at`, `published_at`, `status`
 
 **请求示例**：
 
@@ -795,14 +798,8 @@ Content-Type: application/json
         "description": "分类1的描述"
       },
       "tags": [
-        {
-          "id": 15,
-          "tagName": "隐藏"
-        },
-        {
-          "id": 20,
-          "tagName": "备用"
-        }
+        { "id": 15, "tagName": "隐藏" },
+        { "id": 20, "tagName": "备用" }
       ],
       "status": "published",
       "description": "文章1的描述",
@@ -820,12 +817,14 @@ Content-Type: application/json
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.find_failed` | 查询文章失败 |
 
 ---
 
 ## 恢复已删除的文章
+
+批量恢复软删除的文章。
 
 ```
 POST /api/v1/articles/trash-bin/restore
@@ -833,11 +832,11 @@ POST /api/v1/articles/trash-bin/restore
 
 **认证**：需要 JWT 认证
 
-**请求体**：
+**请求体参数**：
 
-| 字段  | 类型       | 必填    | 描述                 | 默认值 |
-| --- | -------- | ----- | ------------------ | --- |
-| ids | []string | **是** | 要恢复的文章ID（不能是自定义id） | -   |
+| 字段 | 类型       | 必填   | 描述                            | 默认值 |
+| ---- | ---------- | ------ | ------------------------------- | ------ |
+| ids  | `[]string` | **是** | 要恢复的文章 UUID（不支持自定义 ID） | -    |
 
 **请求示例**：
 
@@ -869,12 +868,14 @@ Content-Type: application/json
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.restore_failed` | 恢复文章失败 |
 
 ---
 
 ## 获取文章资源列表
+
+列出某篇文章的所有附属资源文件名。
 
 ```
 GET /api/v1/articles/{article_id}/assets
@@ -884,7 +885,7 @@ GET /api/v1/articles/{article_id}/assets
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
 
 **请求示例**：
 
@@ -905,23 +906,24 @@ Content-Type: application/json
   "message": "",
   "data": [
     "image1.jpg",
-    "1234.exe",
-    "5678.pptx"
+    "presentation.pptx",
+    "document.pdf"
   ],
   "meta": {}
 }
-
 ```
 
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.assets.list_failed` | 列出资源列表失败 |
 
 ---
 
-## 上传文章资源
+## 上传资源
+
+上传附属资源文件到某篇文章。
 
 ```
 POST /api/v1/articles/{article_id}/assets
@@ -931,18 +933,17 @@ POST /api/v1/articles/{article_id}/assets
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
+- `article_id` - 文章 UUID 或自定义 ID
 
-**请求**：
+**请求体**：`multipart/form-data`
 
-- 内容类型：`multipart/form-data`
-- 表单字段：`file` - 要上传的文件（filename字段的值就是asset id）
+- 表单字段：`file` - 要上传的文件
+- 文件名（`filename`）作为资源 ID，后续通过该名称访问
 
 **请求示例**：
 
 ```http
 POST /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets HTTP/1.1
-Host: example.com
 Authorization: Bearer <token>
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 
@@ -964,7 +965,7 @@ Content-Type: application/json
   "success": true,
   "code": 200,
   "message": "",
-  "data": "image.jpg", // asset id
+  "data": "image.jpg",
   "meta": {}
 }
 ```
@@ -972,15 +973,18 @@ Content-Type: application/json
 **接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.assets.file_missing` | 上传的负载中没有找到文件 |
-| `articles.assets.invalid_filename` | 资源ID（文件名）不合法 |
-| `articles.assets.filename_is_required` | 资源ID（文件名）是必须提供的 |
+| `articles.assets.invalid_filename` | 资源文件名不合法 |
+| `articles.assets.filename_is_required` | 资源文件名是必填项 |
+| `articles.assets.upload_failed` | 上传资源失败 |
 | `articles.assets.load_failed` | 加载资源失败 |
 
 ---
 
-## 删除文章资源
+## 删除资源
+
+删除某篇文章下的指定资源文件。
 
 ```
 DELETE /api/v1/articles/{article_id}/assets/{asset_id}
@@ -990,14 +994,13 @@ DELETE /api/v1/articles/{article_id}/assets/{asset_id}
 
 **路径参数**：
 
-- `article_id` - 文章 ID 或自定义 ID
-- `asset_id` - 资源 ID
+- `article_id` - 文章 UUID 或自定义 ID
+- `asset_id` - 资源文件名
 
 **请求示例**：
 
 ```http
 DELETE /api/v1/articles/651227b9-ae18-41dc-b326-f21a8e331ce1/assets/image1.jpg HTTP/1.1
-Host: example.com
 Authorization: Bearer <token>
 ```
 
@@ -1008,19 +1011,17 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-    "success": true,
-    "code": 200,
-    "message": "",
-    "data": null,
-    "meta": {}
+  "success": true,
+  "code": 200,
+  "message": "",
+  "data": null,
+  "meta": {}
 }
 ```
 
-  **接口错误代码**：
+**接口错误代码**：
 
 | 错误码 | 错误描述 |
-| :---- | :------- |
+| :----- | :------- |
 | `articles.delete_assets_failed` | 删除文章资源失败 |
-
-  
-
+| `articles.not_found` | 文章资源不存在 |

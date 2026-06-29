@@ -1,9 +1,9 @@
-# 分类相关 API
+# 标签相关 API
 
-## 1. 获取分类列表（公共）
+## 1. 获取标签列表（公共）
 
 ```
-GET /api/v1/categories
+GET /api/v1/tags
 ```
 
 **认证**：无需认证
@@ -13,13 +13,13 @@ GET /api/v1/categories
 | 参数名 | 类型   | 描述                                            | 默认值 |
 | ------ | ------ | ----------------------------------------------- | ------ |
 | page   | 整数   | 页码                                            | 1      |
-| limit  | 整数   | 每页数量，最大值为 200                          | 20     |
-| expr   | 字符串 | 过滤表达式，支持 `id`、`category_name`、`description` 字段 | -      |
+| limit  | 整数   | 每页数量，最大值为 200                          | 50     |
+| expr   | 字符串 | 过滤表达式，支持 `id`、`tag_name` 字段          | -      |
 
 **请求示例**：
 
 ```http
-GET /api/v1/categories HTTP/1.1
+GET /api/v1/tags HTTP/1.1
 ```
 
 **响应示例**：
@@ -35,13 +35,11 @@ Content-Type: application/json
   "data": [
     {
       "id": 1,
-      "categoryName": "分类1",
-      "description": "分类1的描述"
+      "tagName": "技术"
     },
     {
       "id": 2,
-      "categoryName": "分类2",
-      "description": "分类2的描述"
+      "tagName": "教程"
     }
   ],
   "meta": {
@@ -55,23 +53,23 @@ Content-Type: application/json
 
 | 错误码 | 错误描述 |
 | :----- | :------- |
-| `topics.categories.find_failed` | 查询分类信息失败 |
+| `topics.tags.find_failed` | 查询标签信息失败 |
 
 ---
 
-## 2. 获取分类下的文章（公共）
+## 2. 获取标签下的文章（公共）
 
-获取某个分类下所有 `published` 状态的文章。
+获取某个标签下所有 `published` 状态的文章。
 
 ```
-GET /api/v1/categories/{category}/articles
+GET /api/v1/tags/{tag}/articles
 ```
 
 **认证**：无需认证
 
 **路径参数**：
 
-- `category` - 分类 ID 或分类名称
+- `tag` - 标签 ID 或标签名称
 
 **查询参数**：
 
@@ -84,7 +82,7 @@ GET /api/v1/categories/{category}/articles
 **请求示例**：
 
 ```http
-GET /api/v1/categories/1/articles HTTP/1.1
+GET /api/v1/tags/1/articles HTTP/1.1
 ```
 
 **响应示例**：
@@ -99,8 +97,7 @@ Content-Type: application/json
   "message": "",
   "data": {
     "id": 1,
-    "categoryName": "分类1",
-    "description": "分类1的描述",
+    "tagName": "技术",
     "articles": [
       {
         "id": "651227b9-ae18-41dc-b326-f21a8e331ce1",
@@ -112,9 +109,14 @@ Content-Type: application/json
         "views": 0,
         "likes": 0,
         "categoryID": 1,
+        "category": {
+          "id": 1,
+          "categoryName": "分类1",
+          "description": "分类1的描述"
+        },
         "tags": [
-          { "id": 15, "tagName": "隐藏" },
-          { "id": 20, "tagName": "备用" }
+          { "id": 1, "tagName": "技术" },
+          { "id": 2, "tagName": "教程" }
         ],
         "status": "published",
         "description": "文章1的描述",
@@ -134,99 +136,38 @@ Content-Type: application/json
 
 | 错误码 | 错误描述 |
 | :----- | :------- |
-| `topics.categories.not_found_category` | 没有找到分类信息 |
-| `topics.categories.find_failed` | 查询分类信息失败 |
+| `topics.tags.not_found_tag` | 没有找到标签信息 |
+| `topics.tags.find_failed` | 查询标签信息失败 |
 
 ---
 
-## 3. 管理后台 - 创建分类
+## 3. 管理后台 - 更新标签
 
 ```
-POST /api/v1/categories
-```
-
-**认证**：需要 JWT 认证
-
-**请求体**：
-
-```json
-{
-  "categoryName": "新分类",
-  "description": "新分类的描述"
-}
-```
-
-**请求示例**：
-
-```http
-POST /api/v1/categories HTTP/1.1
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "categoryName": "技术",
-  "description": "技术相关的文章"
-}
-```
-
-**响应示例**：
-
-```json
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "success": true,
-  "code": 200,
-  "message": "",
-  "data": {
-    "id": 3,
-    "categoryName": "技术",
-    "description": "技术相关的文章"
-  },
-  "meta": {}
-}
-```
-
-**接口错误代码**：
-
-| 错误码 | 错误描述 |
-| :----- | :------- |
-| `topics.categories.create.category_name_is_required` | 分类名称为必填项 |
-| `topics.categories.is_exist` | 分类已存在 |
-| `topics.categories.create_failed` | 创建分类失败 |
-
----
-
-## 4. 管理后台 - 更新分类
-
-```
-PATCH /api/v1/categories/{category}
+PATCH /api/v1/tags/{tag}
 ```
 
 **认证**：需要 JWT 认证
 
 **路径参数**：
 
-- `category` - 分类 ID 或分类名称
+- `tag` - 标签 ID 或标签名称
 
 **请求体**：
 
-| 字段名        | 类型   | 必填 | 描述     |
-| ------------- | ------ | ---- | -------- |
-| categoryName  | 字符串 | 否   | 分类名称 |
-| description   | 字符串 | 否   | 分类描述 |
+| 字段名   | 类型   | 必填 | 描述   |
+| -------- | ------ | ---- | ------ |
+| tagName  | 字符串 | 否   | 新名称 |
 
 **请求示例**：
 
 ```http
-PATCH /api/v1/categories/1 HTTP/1.1
+PATCH /api/v1/tags/1 HTTP/1.1
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "categoryName": "技术分类",
-  "description": "更新后的技术分类描述"
+  "tagName": "新技术"
 }
 ```
 
@@ -249,17 +190,15 @@ Content-Type: application/json
 
 | 错误码 | 错误描述 |
 | :----- | :------- |
-| `topics.categories.not_found_category` | 没有找到分类信息 |
-| `topics.categories.update_failed` | 更新分类信息失败 |
+| `topics.tags.not_found_tag` | 没有找到标签信息 |
+| `topics.tags.update_failed` | 更新标签信息失败 |
 
 ---
 
-## 5. 管理后台 - 删除分类
-
-批量删除分类。
+## 4. 管理后台 - 批量删除标签
 
 ```
-DELETE /api/v1/categories/batch-delete
+DELETE /api/v1/tags/batch-delete
 ```
 
 **认证**：需要 JWT 认证
@@ -268,12 +207,12 @@ DELETE /api/v1/categories/batch-delete
 
 | 字段 | 类型     | 必填   | 描述               | 默认值 |
 | ---- | -------- | ------ | ------------------ | ------ |
-| ids  | `[]uint` | **是** | 要删除的分类 ID 列表 | -      |
+| ids  | `[]uint` | **是** | 要删除的标签 ID 列表 | -      |
 
 **请求示例**：
 
 ```http
-DELETE /api/v1/categories/batch-delete HTTP/1.1
+DELETE /api/v1/tags/batch-delete HTTP/1.1
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -301,5 +240,5 @@ Content-Type: application/json
 
 | 错误码 | 错误描述 |
 | :----- | :------- |
-| `topics.categories.delete.ids_is_empty` | 请提供要删除的分类 ID |
-| `topics.categories.delete_failed` | 删除分类失败 |
+| `topics.tags.delete.ids_is_empty` | 请提供要删除的标签 ID |
+| `topics.tags.delete_failed` | 删除标签失败 |
