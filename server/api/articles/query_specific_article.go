@@ -2,13 +2,14 @@ package articles
 
 import (
 	"kzhikcn/pkg/data"
+	"kzhikcn/server/common/authtoken"
 	"kzhikcn/server/common/hdl"
 	"net/http"
 
 	"gorm.io/gorm"
 )
 
-// 获取文章列表
+// 精确查询文章信息
 // GET /api/v1/articles/{article_id}
 //
 // 认证要求:
@@ -45,9 +46,15 @@ import (
 //		-	description (string): 文章描述
 //		-	enableComment (bool): 是否启用评论
 var SpecificArticleHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+	claims := authtoken.GetClaims(r.Context())
+
 	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Limit(1).Preload("Category").Preload("Tags")
-		return tx.Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
+		if claims == nil || !claims.IsAdmin {
+			return tx.Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
+		}
+
+		return tx
 	})
 
 	if err != nil {
