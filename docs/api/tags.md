@@ -57,15 +57,15 @@ Content-Type: application/json
 
 ---
 
-## 2. 获取标签下的文章（公共）
+## 2. 获取标签下的文章
 
-获取某个标签下所有 `published` 状态的文章。
+未认证时只能查询 `published` 状态的文章，认证后可查询所有状态的。
 
 ```
 GET /api/v1/tags/{tag}/articles
 ```
 
-**认证**：无需认证
+**认证**：可选（携带 JWT Token 可查询所有状态，否则仅 `published`）
 
 **路径参数**：
 
@@ -77,7 +77,12 @@ GET /api/v1/tags/{tag}/articles
 | ------ | ------ | -------------------------------------------- | ------ |
 | page   | 整数   | 页码                                         | 1      |
 | limit  | 整数   | 每页数量，最大值为 100                       | 20     |
-| expr   | 字符串 | 过滤表达式，支持文章字段（同文章列表白名单） | -      |
+| expr   | 字符串 | 过滤表达式，支持文章字段（认证后方可使用 `status` 字段） | -      |
+
+> [!note]
+> 此接口支持查询条件表达式（`expr` 参数）。
+> 白名单字段：`id`, `title`, `views`, `likes`, `description`, `enable_comment`, `custom_id`, `created_at`, `update_at`
+> 认证后额外允许：`status`
 
 **请求示例**：
 

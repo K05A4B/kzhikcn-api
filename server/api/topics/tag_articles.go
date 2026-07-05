@@ -3,6 +3,7 @@ package topics
 import (
 	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/queryfilter"
+	"kzhikcn/server/common/authtoken"
 	"kzhikcn/server/common/hdl"
 	"kzhikcn/server/common/httputil"
 	"net/http"
@@ -11,7 +12,8 @@ import (
 )
 
 var GetArticlesByTagHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	applyExpr, err := httputil.UseExpression(r, queryfilter.WhiteList{
+	claims := authtoken.GetClaims(r.Context())
+	wt := queryfilter.WhiteList{
 		"id":             nil,
 		"title":          nil,
 		"views":          nil,
@@ -21,7 +23,13 @@ var GetArticlesByTagHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *h
 		"custom_id":      nil,
 		"created_at":     queryfilter.TimeValueParser(),
 		"update_at":      queryfilter.TimeValueParser(),
-	})
+	}
+
+	if claims != nil {
+		wt.Add("status")
+	}
+
+	applyExpr, err := httputil.UseExpression(r, wt)
 	if err != nil {
 		return httputil.InvalidExpression(err)
 	}
@@ -31,7 +39,11 @@ var GetArticlesByTagHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *h
 		return tx.Preload("Articles", func(db *gorm.DB) *gorm.DB {
 
 			db = httputil.ApplyPagination(r, 20, 100, db)
-			db = db.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
+
+			if claims == nil {
+				db = db.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
+			}
+
 			db = db.Scopes(data.Adapter(applyExpr))
 
 			return db.Preload("Category")
