@@ -46,7 +46,7 @@ var GetArticlesByTagHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *h
 
 			db = db.Scopes(data.Adapter(applyExpr))
 
-			return db.Preload("Category")
+			return db.Preload("Category").Preload("Tags")
 		})
 	})
 

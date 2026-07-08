@@ -44,7 +44,7 @@ var GetArticlesByCategoryHandler = hdl.NewSimpleHandler(func(r *http.Request, re
 			if claims == nil {
 				db = db.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
 			}
-			return db.Preload("Tags")
+			return db.Preload("Category").Preload("Tags")
 		})
 	})
 
