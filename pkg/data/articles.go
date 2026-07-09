@@ -1,7 +1,6 @@
 package data
 
 import (
-	"database/sql"
 	"kzhikcn/pkg/utils"
 	"strings"
 	"time"
@@ -64,24 +63,6 @@ type ArticleTag struct {
 
 	Article Article `gorm:"constraint:OnDelete:CASCADE;"`
 	Tag     Tag     `gorm:"constraint:OnDelete:CASCADE;"`
-}
-
-func (a *Article) BeforeUpdate(tx *gorm.DB) (err error) {
-	if a.Status == ARTICLE_STATUS_PUBLISHED {
-		var publishedAt sql.NullTime
-		err = tx.Model(&Article{}).Select("published_at").Where("id=?", a.ID).Scan(&publishedAt).Error
-		if err != nil {
-			return err
-		}
-
-		if !publishedAt.Valid {
-			now := time.Now()
-			a.PublishedAt = &now
-			tx.Statement.SetColumn("published_at", now)
-		}
-	}
-
-	return nil
 }
 
 func (a *Article) BeforeCreate(tx *gorm.DB) (err error) {

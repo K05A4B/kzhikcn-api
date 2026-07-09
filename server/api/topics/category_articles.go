@@ -22,7 +22,7 @@ var GetArticlesByCategoryHandler = hdl.NewSimpleHandler(func(r *http.Request, re
 		"enable_comment": nil,
 		"custom_id":      nil,
 		"created_at":     queryfilter.TimeValueParser(),
-		"update_at":      queryfilter.TimeValueParser(),
+		"updated_at":     queryfilter.TimeValueParser(),
 	}
 
 	if claims != nil {
@@ -56,8 +56,10 @@ var GetArticlesByCategoryHandler = hdl.NewSimpleHandler(func(r *http.Request, re
 	resp.Meta["count"] = len(category.Articles)
 
 	httputil.SetTotal(resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
-		tx = tx.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
 		tx = tx.Where("category_id=?", category.ID)
+		if claims == nil {
+			tx = tx.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
+		}
 		return tx
 	}, applyExpr)
 

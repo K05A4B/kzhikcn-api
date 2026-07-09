@@ -22,7 +22,7 @@ var GetArticlesByTagHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *h
 		"enable_comment": nil,
 		"custom_id":      nil,
 		"created_at":     queryfilter.TimeValueParser(),
-		"update_at":      queryfilter.TimeValueParser(),
+		"updated_at":     queryfilter.TimeValueParser(),
 	}
 
 	if claims != nil {
@@ -58,10 +58,12 @@ var GetArticlesByTagHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *h
 	resp.Meta["count"] = len(tag.Articles)
 
 	httputil.SetTotal(resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
-		return tx.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
-			Where("article_tags.tag_id = ?", tag.ID).
-			Where("articles.status = ?", data.ARTICLE_STATUS_PUBLISHED).
-			Scopes(data.Adapter(applyExpr))
+		tx = tx.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
+			Where("article_tags.tag_id = ?", tag.ID)
+		if claims == nil {
+			tx = tx.Where("articles.status = ?", data.ARTICLE_STATUS_PUBLISHED)
+		}
+		return tx.Scopes(data.Adapter(applyExpr))
 	})
 
 	return nil
