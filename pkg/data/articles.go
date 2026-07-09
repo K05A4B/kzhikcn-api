@@ -138,8 +138,15 @@ func (a *Article) Update(ea EditableArticle) error {
 		}
 
 		if !utils.IsEmptyString(ea.Status.String()) {
-			article.Status = ToArticleStatus(ea.Status.String())
+			newStatus := ToArticleStatus(ea.Status.String())
+			article.Status = newStatus
 			selectedFields = append(selectedFields, "status")
+
+			if newStatus == ARTICLE_STATUS_PUBLISHED && a.PublishedAt == nil {
+				now := time.Now()
+				article.PublishedAt = &now
+				selectedFields = append(selectedFields, "published_at")
+			}
 		}
 
 		err := tx.Model(a).Select(selectedFields).Updates(article).Error
