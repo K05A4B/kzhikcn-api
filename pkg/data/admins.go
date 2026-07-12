@@ -16,7 +16,7 @@ type Admin struct {
 }
 
 func (a *Admin) setPassword() (err error) {
-	if len(a.Password) != 0 {
+	if len(a.Password) != 0 && !isBcryptHash(a.Password) {
 		a.Password, err = bcrypt.GenerateFromPassword([]byte(a.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return
@@ -26,15 +26,17 @@ func (a *Admin) setPassword() (err error) {
 	return
 }
 
+func isBcryptHash(b []byte) bool {
+	return len(b) >= 4 && b[0] == '$' && b[1] == '2' && (b[2] == 'a' || b[2] == 'y' || b[2] == 'b')
+}
+
 func (a *Admin) BeforeCreate(tx *gorm.DB) (err error) {
 	err = a.setPassword()
 	return
 }
 
 func (a *Admin) BeforeUpdate(tx *gorm.DB) (err error) {
-	if tx.Statement.Changed("password") {
-		err = a.setPassword()
-	}
+	err = a.setPassword()
 	return
 }
 
