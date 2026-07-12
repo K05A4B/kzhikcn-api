@@ -7,6 +7,7 @@ toolchain go1.26.2
 require (
 	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
@@ -19,7 +20,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/yuin/goldmark v1.7.11
 	golang.org/x/crypto v0.41.0
-	golang.org/x/term v0.34.0
+	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/sqlite v1.5.7
@@ -36,7 +37,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -57,5 +57,4 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

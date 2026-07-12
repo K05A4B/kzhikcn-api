@@ -1,11 +1,13 @@
 package articles
 
 import (
+	"context"
 	"kzhikcn/pkg/assets"
 	"kzhikcn/pkg/data"
 	"kzhikcn/server/common/hdl"
 	"net/http"
 
+	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
@@ -25,11 +27,14 @@ var BatchDeleteArticlesHandler = hdl.NewHandler(
 		}
 
 		if payload.HardDelete {
+			eg, _ := errgroup.WithContext(context.Background())
 			for _, id := range payload.IDs {
-				err = assets.ArticlesRepo.Remove(id)
-				if err != nil {
-					return ErrArticleCleanAssetsFailed.Wrap(err)
-				}
+				eg.Go(func() error {
+					return assets.ArticlesRepo.Remove(id)
+				})
+			}
+			if err = eg.Wait(); err != nil {
+				return ErrArticleCleanAssetsFailed.Wrap(err)
 			}
 		}
 

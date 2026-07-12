@@ -27,14 +27,14 @@ func (j *HandlerError) With(key string, val any) *HandlerError {
 	fields[key] = val
 
 	return &HandlerError{
-		msg:        j.msg,
-		statusCode: j.statusCode,
-		errorCode:  j.errorCode,
-		fields:     cloneFields(j.fields),
-		internal:   j.internal,
-		file:       j.file,
-		line:       j.line,
-	}
+			msg:        j.msg,
+			statusCode: j.statusCode,
+			errorCode:  j.errorCode,
+			fields:     fields,
+			internal:   j.internal,
+			file:       j.file,
+			line:       j.line,
+		}
 }
 
 func (j *HandlerError) Error() string {

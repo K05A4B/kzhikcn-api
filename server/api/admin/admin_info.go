@@ -33,7 +33,7 @@ var AdminInfoHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Resp
 	claims := authtoken.GetClaims(r.Context())
 
 	admin, err := data.GetAdminById(claims.AdminId, func(tx *gorm.DB) *gorm.DB {
-		return tx.Omit("password", "tow_fa_secret")
+		return tx.Omit("password", "totp_secret")
 	})
 
 	if err != nil {

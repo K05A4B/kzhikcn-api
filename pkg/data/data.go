@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,6 +19,7 @@ import (
 )
 
 var (
+	mu     sync.RWMutex
 	db     *gorm.DB
 	driver string
 
@@ -31,6 +33,9 @@ func OnConnected(fn func()) {
 }
 
 func ConnectDatabase(driverName, dsn string) (err error) {
+	mu.Lock()
+	defer mu.Unlock()
+
 	if db != nil {
 		return nil
 	}
@@ -150,6 +155,8 @@ func InitDatabase() (*Admin, error) {
 }
 
 func DB() *gorm.DB {
+	mu.RLock()
+	defer mu.RUnlock()
 	return db
 }
 

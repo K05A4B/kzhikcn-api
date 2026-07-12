@@ -32,7 +32,9 @@ func (a *Admin) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 func (a *Admin) BeforeUpdate(tx *gorm.DB) (err error) {
-	err = a.setPassword()
+	if tx.Statement.Changed("password") {
+		err = a.setPassword()
+	}
 	return
 }
 

@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"kzhikcn/pkg/config"
+	"kzhikcn/pkg/log"
 	"kzhikcn/server/common/authtoken"
 	"kzhikcn/server/common/hdl"
 	"net"
@@ -72,12 +73,14 @@ func (hrate *httpRate) handler(h http.Handler) http.Handler {
 
 		host, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			return ErrInvalidRemoteAddr
+			host = r.RemoteAddr
 		}
 
 		ip, err := netip.ParseAddr(host)
 		if err != nil {
-			return ErrInvalidRemoteAddr
+			host = "0.0.0.0"
+			log.Error("parse remote addr failed: ", err)
+			meta["failed_to_parse_remote_addr"] = r.RemoteAddr
 		}
 
 		for _, addr := range hrate.blackList {
