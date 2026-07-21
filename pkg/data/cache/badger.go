@@ -46,6 +46,10 @@ func (c *BadgerCache) Delete(ctx context.Context, key string) error {
 	})
 }
 
+func (c *BadgerCache) Close() error {
+	return c.db.Close()
+}
+
 func (c *BadgerCache) Exists(ctx context.Context, key string) (bool, error) {
 	val, err := c.Get(ctx, key)
 	if errors.Is(err, badger.ErrKeyNotFound) {

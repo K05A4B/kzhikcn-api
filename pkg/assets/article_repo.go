@@ -13,15 +13,14 @@ var (
 	ErrAssetsDirNotFound = article.ErrAssetsDirNotFound
 )
 
-func init() {
-	config.HookLoaded(func(c *config.Config) {
-		if c.Storage.Provider != "local" {
-			log.Fatal("unsupported storage provider: ", c.Storage.Provider)
-		}
+// Init 初始化文章存储。由 App.Initialize() 显式调用，替代原先的隐式 init()。
+func Init(c *config.Config) {
+	if c.Storage.Provider != "local" {
+		log.Fatal("unsupported storage provider: ", c.Storage.Provider)
+	}
 
-		ArticlesRepo = &article.LocalRepository{
-			AssetsDir: "assets",
-			BasePath:  c.Storage.Articles.BasePath,
-		}
-	})
+	ArticlesRepo = &article.LocalRepository{
+		AssetsDir: "assets",
+		BasePath:  c.Storage.Articles.BasePath,
+	}
 }

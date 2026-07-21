@@ -20,6 +20,7 @@ type Cache interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Delete(ctx context.Context, key string) error
 	Exists(ctx context.Context, key string) (bool, error)
+	Close() error
 }
 
 func InitCache(c *config.Config) error {
@@ -31,7 +32,7 @@ func InitCache(c *config.Config) error {
 	case "redis":
 		err = initRedis(c.Cache.Redis)
 	default:
-		err = errors.Errorf("unsupported cache provider: %s", c.Storage.Provider)
+		err = errors.Errorf("unsupported cache provider: %s", c.Cache.Provider)
 	}
 
 	return err
@@ -128,6 +129,10 @@ func GetJson(ctx context.Context, key string, v any) error {
 	}
 
 	return json.Unmarshal(d, v)
+}
+
+func CloseCache() error {
+	return cache.Close()
 }
 
 func Keys(v ...string) string {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"kzhikcn/internal/appinfo"
 	cmdadmin "kzhikcn/internal/cli/admin"
-	"kzhikcn/internal/cli/cliutils"
 	cmdserve "kzhikcn/internal/cli/serve"
 
 	"github.com/urfave/cli/v2"
@@ -45,7 +44,7 @@ var AppCli = cli.App{
 					Value:   "0.0.0.0:5083",
 				},
 			},
-			Action: cliutils.ConnectDatabase(cmdserve.Serve()),
+			Action: cmdserve.Serve(),
 		},
 		cmdadmin.AdminCommands,
 	},

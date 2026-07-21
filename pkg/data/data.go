@@ -2,7 +2,6 @@ package data
 
 import (
 	"database/sql"
-	_ "kzhikcn/pkg/data/cache"
 	"kzhikcn/pkg/log"
 	"kzhikcn/pkg/utils"
 	"os"
@@ -158,6 +157,19 @@ func DB() *gorm.DB {
 	mu.RLock()
 	defer mu.RUnlock()
 	return db
+}
+
+func CloseDB() error {
+	mu.RLock()
+	defer mu.RUnlock()
+	if db == nil {
+		return nil
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }
 
 func GetDriverName() string {

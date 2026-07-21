@@ -23,6 +23,10 @@ func (rc *RedisCache) Delete(ctx context.Context, key string) error {
 	return rc.client.Del(ctx, key).Err()
 }
 
+func (rc *RedisCache) Close() error {
+	return rc.client.Close()
+}
+
 func (rc *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
 	exists, err := rc.client.Exists(ctx, key).Result()
 	return exists > 0, err
