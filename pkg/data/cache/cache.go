@@ -83,6 +83,7 @@ func initRedis(conf config.CacheRedisConf) error {
 
 	cache = &RedisCache{
 		client: client,
+		prefix: conf.Prefix,
 	}
 
 	return nil
