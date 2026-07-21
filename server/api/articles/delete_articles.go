@@ -4,7 +4,7 @@ import (
 	"context"
 	"kzhikcn/pkg/assets"
 	"kzhikcn/pkg/data"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 
 	"golang.org/x/sync/errgroup"

@@ -3,7 +3,7 @@ package admin
 import (
 	"kzhikcn/pkg/data"
 	"kzhikcn/server/common/authtoken"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 
 	"gorm.io/gorm"

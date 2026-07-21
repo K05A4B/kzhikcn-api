@@ -1,7 +1,7 @@
 package api
 
 import (
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 	"time"
 )

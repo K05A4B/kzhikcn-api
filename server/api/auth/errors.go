@@ -1,6 +1,6 @@
 package auth
 
-import "kzhikcn/server/common/hdl"
+import "kzhikcn/pkg/hdl"
 
 var (
 	ErrAuthenticationFailed   = hdl.DefineError(401, "认证失败", "auth.authentication_failed")

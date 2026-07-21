@@ -6,7 +6,7 @@ import (
 	"kzhikcn/pkg/assets"
 	"kzhikcn/pkg/data"
 	"kzhikcn/server/common/articlemd"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/server/common/httputil"
 	"net/http"
 

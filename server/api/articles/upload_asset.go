@@ -4,7 +4,7 @@ import (
 	"io"
 	"kzhikcn/pkg/assets"
 	"kzhikcn/pkg/utils"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 
 	"net/http"
 	"path/filepath"

@@ -1,7 +1,7 @@
 package articles
 
 import (
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 )
 
 var (

@@ -2,7 +2,7 @@ package articles
 
 import (
 	"kzhikcn/pkg/data"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/server/common/httputil"
 	"net/http"
 

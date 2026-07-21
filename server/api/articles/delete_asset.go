@@ -2,7 +2,7 @@ package articles
 
 import (
 	"kzhikcn/pkg/assets"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"

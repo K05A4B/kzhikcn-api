@@ -3,7 +3,7 @@ package api
 import (
 	"kzhikcn/pkg/config"
 	"kzhikcn/pkg/data"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/server/common/machineresouces"
 	"net/http"
 

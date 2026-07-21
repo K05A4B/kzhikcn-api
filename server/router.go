@@ -2,7 +2,7 @@ package server
 
 import (
 	"kzhikcn/server/api"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/server/common/middlewares"
 	"net/http"
 

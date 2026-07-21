@@ -2,7 +2,7 @@ package auth
 
 import (
 	"kzhikcn/server/common/authtoken"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 )
 

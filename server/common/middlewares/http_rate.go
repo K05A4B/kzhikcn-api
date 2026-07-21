@@ -4,7 +4,7 @@ import (
 	"kzhikcn/pkg/config"
 	"kzhikcn/pkg/log"
 	"kzhikcn/server/common/authtoken"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net"
 	"net/http"
 	"net/netip"

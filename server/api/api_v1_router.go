@@ -5,7 +5,7 @@ import (
 	"kzhikcn/server/api/articles"
 	"kzhikcn/server/api/auth"
 	"kzhikcn/server/api/topics"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/server/common/middlewares"
 
 	"github.com/go-chi/chi/v5"

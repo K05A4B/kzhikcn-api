@@ -1,6 +1,6 @@
 package topics
 
-import "kzhikcn/server/common/hdl"
+import "kzhikcn/pkg/hdl"
 
 var (
 	ErrTagDeleteIdIsRequired                = hdl.DefineError(400, "请提提供要删除的标签的id (ids)", "topics.tags.delete.ids_is_empty")

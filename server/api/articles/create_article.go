@@ -3,7 +3,7 @@ package articles
 import (
 	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/utils"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 
 	"gorm.io/gorm"

@@ -5,7 +5,7 @@ import (
 	"kzhikcn/pkg/data/cache"
 	"kzhikcn/pkg/log"
 	"kzhikcn/pkg/utils"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 	"time"
 
