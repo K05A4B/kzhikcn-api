@@ -127,7 +127,6 @@ func AutoMigrates() error {
 		&Category{},
 		&Tag{},
 		&ArticleTag{},
-		&FriendLink{},
 	)
 	if err != nil {
 		return err

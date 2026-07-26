@@ -93,3 +93,10 @@ func MultiSetIfNotNil[T any](pairs [][]*T) {
 func IsEmptyString(str string) bool {
 	return len(strings.TrimSpace(str)) == 0
 }
+
+func NilToValue[T any](val *T, value T) T {
+	if val == nil {
+		return value
+	}
+	return *val
+}

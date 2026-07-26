@@ -1,37 +1,37 @@
 package articles
 
 import (
-	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"kzhikcn/server/common/httputil"
+	"kzhikcn/server/service"
 	"net/http"
-
-	"gorm.io/gorm"
 )
 
-var GetDeletedArticlesHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	applyExpr, err := httputil.UseExpression(r, articleExprWhiteList().Add("status"))
-	if err != nil {
-		return err
-	}
+func GetDeletedArticles(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		page, limit := httputil.Pagination(r, 20, 100)
+		orderBy := httputil.QueryString(r, "orderBy", "publishedAt:desc")
 
-	onlyDeleted := func(tx *gorm.DB) *gorm.DB {
-		tx = tx.Unscoped()
+		wt := articleExprWhiteList().Add("status")
+		applyExpr, err := httputil.UseExpression(r, wt)
+		if err != nil {
+			return httputil.InvalidExpression(err)
+		}
 
-		return tx.Not("deleted_at IS ?", nil)
-	}
+		articles, total, err := appCtx.ArticleSvc.GetDeletedArticles(r.Context(), service.GetArticlesOptions{
+			Page:    page,
+			Limit:   limit,
+			OrderBy: orderBy,
+		}, applyExpr)
+		if err != nil {
+			return ErrFindArticleFailed.Wrap(err)
+		}
 
-	articles, err := data.GetArticles(onlyDeleted, applyExpr, applyArticleOrderBy(r), func(tx *gorm.DB) *gorm.DB {
-		return httputil.ApplyPagination(r, 20, 100, tx)
+		resp.Data = articles
+		resp.Meta["total"] = total
+		resp.Meta["count"] = len(articles)
+
+		return nil
 	})
-
-	if err != nil {
-		return ErrFindArticleFailed.Wrap(err)
-	}
-
-	resp.Data = articles
-	resp.Meta["count"] = len(articles)
-
-	httputil.SetTotal(resp, data.Article{}, applyExpr, onlyDeleted)
-	return nil
-})
+}

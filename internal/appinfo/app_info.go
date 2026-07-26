@@ -7,6 +7,11 @@ import (
 
 var (
 	CurrentInfo = AppInfo{}
+	Name        string
+	Version     string
+	Author      string
+	Copyright   string
+	Meta        map[string]any
 )
 
 type AppInfo struct {
@@ -25,4 +30,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	Name = CurrentInfo.Name
+	Version = CurrentInfo.Version
+	Author = CurrentInfo.Author
+	Copyright = CurrentInfo.Copyright
+	Meta = CurrentInfo.Meta
 }

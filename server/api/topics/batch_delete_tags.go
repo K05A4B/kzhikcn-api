@@ -1,32 +1,27 @@
 package topics
 
 import (
-	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"net/http"
-
-	"gorm.io/gorm"
 )
 
 type BatchDeleteTopicsRequest struct {
 	IDs []uint `json:"ids"`
 }
 
-var BatchDeleteTagsHandler = hdl.NewHandler(
-	func(r *http.Request, resp *hdl.Response, payload BatchDeleteTopicsRequest) error {
-		ids := payload.IDs
-		err := data.DeleteTag(func(tx *gorm.DB) *gorm.DB {
-			return tx.Where("id IN ?", ids)
-		})
+func BatchDeleteTags(appCtx *app.AppContext) hdl.Handler[BatchDeleteTopicsRequest] {
+	return hdl.NewHandler(
+		func(r *http.Request, resp *hdl.Response, payload BatchDeleteTopicsRequest) error {
+			err := appCtx.TopicSvc.DeleteTags(r.Context(), payload.IDs)
+			if err != nil {
+				return ErrTagDeleteFailed
+			}
+			return nil
+		},
 
-		if err != nil {
-			return ErrTagDeleteFailed
-		}
-
-		return nil
-	},
-
-	hdl.When(func(payload BatchDeleteTopicsRequest) bool {
-		return len(payload.IDs) == 0
-	}, ErrTagDeleteIdIsRequired),
-)
+		hdl.When(func(payload BatchDeleteTopicsRequest) bool {
+			return len(payload.IDs) == 0
+		}, ErrTagDeleteIdIsRequired),
+	)
+}

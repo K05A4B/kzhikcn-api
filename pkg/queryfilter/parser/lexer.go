@@ -111,14 +111,14 @@ func isPredefinedValue(str string) bool {
 
 func invalidToken(s []rune, i int) error {
 	if i < 0 || i >= len(s) {
-		return errors.Errorf("(invalid token) unexpected end of input at column %d (%s)", i, s)
+		return errors.Errorf("(invalid token) unexpected end of input at column %d (%s)", i, string(s))
 	}
 
 	start := max(i-5, 0)
 	end := min(i+5, len(s))
 
 	context := s[start:end]
-	return errors.Errorf("(invalid token) '%s' at column %d, context: ...%s...", string(s[i]), i, context)
+	return errors.Errorf("(invalid token) '%s' at column %d, context: ...%s...", string(s[i]), i, string(context))
 }
 
 func tokenizeNumber(s []rune, begin int) (n string, nextBegin int, isFloat bool, err error) {

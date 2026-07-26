@@ -1,14 +1,13 @@
 package auth
 
 import (
-	"kzhikcn/pkg/data"
-	"kzhikcn/pkg/data/cache"
-	"kzhikcn/pkg/utils"
 	"kzhikcn/pkg/hdl"
-	"kzhikcn/server/common/secutils"
+	"kzhikcn/pkg/utils"
+	"kzhikcn/server/app"
+	"kzhikcn/server/service"
 	"net/http"
-	"time"
 
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -31,73 +30,76 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-var LoginHandler = hdl.NewHandler(
-	func(r *http.Request, resp *hdl.Response, payload LoginRequest) error {
+func Login(appCtx *app.AppContext) hdl.Handler[LoginRequest] {
+	return hdl.NewHandler(
+		func(r *http.Request, resp *hdl.Response, payload LoginRequest) error {
+			return loginHandler(r, resp, payload, appCtx)
+		},
 
-		admin, err := data.GetAdminByName(payload.Username, func(tx *gorm.DB) *gorm.DB {
-			return tx.Select("password", "username", "id", "enable_mfa")
-		})
-		if err == gorm.ErrRecordNotFound {
-			return ErrAuthenticationFailed
-		}
-		if err != nil {
-			return ErrFindAdminFailed.Wrap(err)
-		}
+		hdl.MissingFields(func(payload LoginRequest) []string {
+			missing := []string{}
 
-		ok, err := secutils.ComparePassword(admin.Password, payload.Password)
-		if err != nil {
-			return ErrValidatePasswordFailed.Wrap(err)
-		}
-
-		if !ok {
-			return ErrAuthenticationFailed
-		}
-
-		respData := &LoginResponse{}
-		defer func() { resp.Data = respData }()
-
-		if admin.EnableMFA {
-			respData.Status = "needMFA"
-			respData.ChallengeId = utils.RandomString(24)
-
-			err = cache.SetJson(r.Context(), cache.Keys(mfaChallengesKey, respData.ChallengeId), &challenge{
-				Username:    admin.Username,
-				UserId:      admin.ID,
-				MaxAttempts: 5,
-				Expire:      time.Now().Add(2 * time.Minute),
-			}, 2*time.Minute)
-
-			if err != nil {
-				return ErrCreateChallengeFailed.Wrap(err)
+			if utils.IsEmptyString(payload.Username) {
+				missing = append(missing, "username")
 			}
 
-			return nil
-		}
+			if utils.IsEmptyString(payload.Password) {
+				missing = append(missing, "password")
+			}
 
-		respData.Status = "authorized"
-		resp.Message = "认证成功（建议启用MFA）"
+			return missing
+		},
+		))
+}
 
-		token, err := permitLogin(r, admin)
+func loginHandler(r *http.Request, resp *hdl.Response, payload LoginRequest, appCtx *app.AppContext) error {
+	adminSvc := appCtx.AdminSvc
+	authSvc := appCtx.AuthSvc
+
+	username := payload.Username
+	password := payload.Password
+
+	admin, err := adminSvc.GetAdminByName(r.Context(), username)
+	if err == gorm.ErrRecordNotFound {
+		return ErrAuthenticationFailed
+	}
+
+	if err != nil {
+		return ErrFindAdminFailed.Wrap(err)
+	}
+
+	token, err := authSvc.AdminLogin(r.Context(), admin, password)
+
+	if errors.Is(err, service.ErrValidatePasswordFailed) {
+		return ErrValidatePasswordFailed.Wrap(err)
+	}
+
+	if errors.Is(err, service.ErrGenerateTokenFailed) {
+		return ErrGenerateTokenFailed.Wrap(err)
+	}
+
+	if errors.Is(err, service.ErrAuthenticationFailed) {
+		return ErrAuthenticationFailed
+	}
+
+	result := &LoginResponse{}
+	defer func() { resp.Data = result }()
+
+	if errors.Is(err, service.ErrMFARequired) {
+		result.Status = "needMFA"
+		challenge, err := authSvc.CreateChallenge(r.Context(), username, admin.ID)
 		if err != nil {
-			return ErrGenerateTokenFailed.Wrap(err)
+			return ErrCreateChallengeFailed.Wrap(err)
 		}
 
-		respData.Token = token
+		result.ChallengeId = challenge.ID
 
 		return nil
-	},
+	}
 
-	hdl.MissingFields(func(payload LoginRequest) []string {
-		missing := []string{}
+	result.Status = "authorized"
+	result.Token = token
+	resp.Message = "认证成功（建议启用MFA）"
 
-		if utils.IsEmptyString(payload.Username) {
-			missing = append(missing, "username")
-		}
-
-		if utils.IsEmptyString(payload.Password) {
-			missing = append(missing, "password")
-		}
-
-		return missing
-	}),
-)
+	return nil
+}

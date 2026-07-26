@@ -1,32 +1,33 @@
 package topics
 
 import (
-	"errors"
 	"kzhikcn/pkg/data"
-	"kzhikcn/pkg/utils"
 	"kzhikcn/pkg/hdl"
+	"kzhikcn/pkg/utils"
+	"kzhikcn/server/app"
+	"kzhikcn/server/service"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/pkg/errors"
 )
 
-var CreateCategoryHandler = hdl.NewHandler[data.EditableCategory](
-	func(r *http.Request, resp *hdl.Response, payload data.EditableCategory) error {
-		category, err := data.CreateCategory(payload)
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return ErrCategoryIsExist
-		}
+func CreateCategory(appCtx *app.AppContext) hdl.Handler[data.EditableCategory] {
+	return hdl.NewHandler(
+		func(r *http.Request, resp *hdl.Response, payload data.EditableCategory) error {
+			category, err := appCtx.TopicSvc.CreateCategory(r.Context(), payload)
+			if errors.Is(err, service.ErrCategoryExist) {
+				return ErrCategoryIsExist
+			}
+			if err != nil {
+				return ErrCategoryCreateFailed
+			}
 
-		if err != nil {
-			return ErrCategoryCreateFailed
-		}
+			resp.Data = category
+			return nil
+		},
 
-		resp.Data = category
-
-		return nil
-	},
-
-	hdl.When(func(payload data.EditableCategory) bool {
-		return utils.IsEmptyString(payload.CategoryName)
-	}, ErrCategoryCreateCategoryNameIsRequired),
-)
+		hdl.When(func(payload data.EditableCategory) bool {
+			return utils.IsEmptyString(payload.CategoryName)
+		}, ErrCategoryCreateCategoryNameIsRequired),
+	)
+}

@@ -1,7 +1,7 @@
 package cmdadmin
 
 import (
-	"kzhikcn/server"
+	"kzhikcn/server/app"
 
 	"github.com/urfave/cli/v2"
 )
@@ -13,7 +13,7 @@ func dbAction(skip bool, action cli.ActionFunc) cli.ActionFunc {
 			return action(ctx)
 		}
 
-		app := server.New()
+		app := app.New()
 		configFile := ctx.String("config")
 
 		if err := app.Bootstrap(configFile); err != nil {

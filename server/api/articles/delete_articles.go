@@ -1,13 +1,11 @@
 package articles
 
 import (
-	"context"
-	"kzhikcn/pkg/assets"
-	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"net/http"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -16,32 +14,22 @@ type BatchDeleteArticlesRequest struct {
 	HardDelete bool     `json:"hardDelete"`
 }
 
-var BatchDeleteArticlesHandler = hdl.NewHandler(
-	func(r *http.Request, resp *hdl.Response, payload BatchDeleteArticlesRequest) error {
-		err := data.DeleteArticle(payload.HardDelete, func(tx *gorm.DB) *gorm.DB {
-			return tx.Where("id IN ?", payload.IDs)
-		})
-
-		if err != nil {
-			return ErrDeleteArticleFailed.Wrap(err)
-		}
-
-		if payload.HardDelete {
-			eg, _ := errgroup.WithContext(context.Background())
+func BatchDeleteArticles(appCtx *app.AppContext) hdl.Handler[BatchDeleteArticlesRequest] {
+	return hdl.NewHandler(
+		func(r *http.Request, resp *hdl.Response, payload BatchDeleteArticlesRequest) error {
 			for _, id := range payload.IDs {
-				eg.Go(func() error {
-					return assets.ArticlesRepo.Remove(id)
-				})
+				if err := appCtx.ArticleSvc.Delete(r.Context(), id, payload.HardDelete); err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						continue
+					}
+					return ErrDeleteArticleFailed.Wrap(err)
+				}
 			}
-			if err = eg.Wait(); err != nil {
-				return ErrArticleCleanAssetsFailed.Wrap(err)
-			}
-		}
+			return nil
+		},
 
-		return nil
-	},
-
-	hdl.When(func(payload BatchDeleteArticlesRequest) bool {
-		return len(payload.IDs) == 0
-	}, hdl.Error(400, "请提供要删除文章的id (ids)", nil, "articles.delete.missing_ids")),
-)
+		hdl.When(func(payload BatchDeleteArticlesRequest) bool {
+			return len(payload.IDs) == 0
+		}, hdl.Error(400, "请提供要删除文章的id (ids)", nil, "articles.delete.missing_ids")),
+	)
+}

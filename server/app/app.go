@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -9,8 +9,10 @@ import (
 	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/data/cache"
 	"kzhikcn/pkg/log"
+	"kzhikcn/server/service"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pkg/errors"
@@ -45,12 +47,17 @@ type appHooks struct {
 // App 是服务启动生命周期的编排者。
 // 每个实例沿状态机单向推进：New → Bootstrapped → Initialized → Migrated → Ready → Serving → Stopped。
 type App struct {
-	State  AppState
-	Router chi.Router
+	State   AppState
+	Router  chi.Router
+	Context *AppContext
+	Config  *config.Config
 
-	conf  *config.Config
 	hooks appHooks
 	srv   *http.Server
+
+	confMutex sync.RWMutex
+
+	configFile string
 }
 
 // New 创建一个处于 StateNew 状态的 App 实例。
@@ -60,6 +67,36 @@ func New() *App {
 	}
 }
 
+func (a *App) loadConfig() error {
+	a.confMutex.Lock()
+	defer a.confMutex.Unlock()
+
+	conf, err := config.LoadConfigFromFile(a.configFile)
+
+	if err != nil {
+		return err
+	}
+
+	if a.Config == nil {
+		a.Config = conf
+	} else {
+		(*a.Config) = (*conf)
+	}
+
+	return nil
+}
+
+func (a *App) ReloadConfig() error {
+	return a.loadConfig()
+}
+
+func (a *App) GetConfig() config.Config {
+	a.confMutex.RLock()
+	conf := *a.Config
+	defer a.confMutex.RUnlock()
+	return conf
+}
+
 // Bootstrap 加载配置文件，完成解析并触发 OnAfterConfig 回调。
 // configFile: YAML 配置文件的路径（必须存在）。
 func (a *App) Bootstrap(configFile string) error {
@@ -67,14 +104,14 @@ func (a *App) Bootstrap(configFile string) error {
 		return fmt.Errorf("cannot bootstrap from state %d", a.State)
 	}
 
-	conf, err := config.LoadConfigFromFile(configFile)
+	a.configFile = configFile
+	err := a.loadConfig()
 	if err != nil {
 		return err
 	}
-	a.conf = conf
 
 	for _, fn := range a.hooks.OnAfterConfig {
-		if err := fn(conf); err != nil {
+		if err := fn(a.Config); err != nil {
 			return err
 		}
 	}
@@ -105,7 +142,7 @@ func (a *App) Initialize() error {
 		return fmt.Errorf("cannot initialize from state %d", a.State)
 	}
 
-	conf := a.conf
+	conf := a.Config
 
 	// 1. 数据库连接
 	if err := data.ConnectDatabase(conf.Database.Driver, conf.Database.Dsn); err != nil {
@@ -128,12 +165,25 @@ func (a *App) Initialize() error {
 	}
 
 	// 3. 存储
-	assets.Init(conf)
+	articlesRepo := assets.Init(conf)
 	for _, fn := range a.hooks.OnAfterStorage {
 		if err := fn(); err != nil {
 			return err
 		}
 	}
+
+	// 4. 初始化上下文
+	a.Context = &AppContext{
+		Context: context.Background(),
+		app:     a,
+	}
+
+	serviceCtx := service.NewServiceContext(a.Config, articlesRepo, data.DB())
+
+	a.Context.ArticleSvc = service.NewArticleService(serviceCtx, nil)
+	a.Context.AuthSvc = service.NewAuthService(serviceCtx, nil)
+	a.Context.AdminSvc = service.NewAdminService(serviceCtx)
+	a.Context.TopicSvc = service.NewTopicService(serviceCtx)
 
 	a.State = StateInitialized
 	return nil
@@ -174,12 +224,12 @@ func (a *App) Migrate() error {
 // Ready 构建 HTTP 路由树。在路由构建前后分别触发 OnBeforeRouter / OnAfterRouter，
 // 插件可借此注入自己的路由和中间件。
 // 前置：StateMigrated。
-func (a *App) Ready() error {
+func (a *App) Ready(router chi.Router) error {
 	if a.State != StateMigrated {
 		return fmt.Errorf("cannot ready from state %d", a.State)
 	}
 
-	r := NewRouter()
+	r := router
 
 	for _, fn := range a.hooks.OnBeforeRouter {
 		if err := fn(r); err != nil {
@@ -211,7 +261,7 @@ func (a *App) Serve(addr string) error {
 		}
 	}
 
-	conf := a.conf
+	conf := a.Config
 	cert := conf.CertFile
 	key := conf.KeyFile
 
@@ -235,7 +285,7 @@ func (a *App) Serve(addr string) error {
 	return a.srv.ListenAndServe()
 }
 
-// Shutdown 优雅关闭服务：停止 HTTP → 关闭缓存 → 断开数据库 → 触发 OnShutdown 回调。
+// Shutdown 关闭服务：停止 HTTP → 关闭缓存 → 断开数据库 → 触发 OnShutdown 回调。
 // 从其他 goroutine 调用会触发 Serve() 返回 http.ErrServerClosed。
 func (a *App) Shutdown(ctx context.Context) error {
 	if a.State != StateServing {
@@ -276,7 +326,7 @@ func (a *App) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// ── Hook 注册方法 ────────────────────────────────────────────
+// Hook 注册方法
 
 func (a *App) HookAfterConfig(fn func(*config.Config) error) {
 	a.hooks.OnAfterConfig = append(a.hooks.OnAfterConfig, fn)

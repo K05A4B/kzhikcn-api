@@ -3,7 +3,8 @@ package cmdserve
 import (
 	"context"
 	"kzhikcn/pkg/log"
-	"kzhikcn/server"
+	serverApp "kzhikcn/server/app"
+	"kzhikcn/server/router"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,7 +18,7 @@ import (
 // 生命周期：BootstrapOrCreate → Initialize → Migrate → Ready → Serve（goroutine）→ 信号捕获 → Shutdown。
 func Serve() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
-		app := server.New()
+		app := serverApp.New()
 
 		configFile := ctx.String("config")
 		if err := app.BootstrapOrCreate(configFile); err != nil {
@@ -29,7 +30,7 @@ func Serve() cli.ActionFunc {
 		if err := app.Migrate(); err != nil {
 			return err
 		}
-		if err := app.Ready(); err != nil {
+		if err := app.Ready(router.NewRouter(app)); err != nil {
 			return err
 		}
 
@@ -52,7 +53,7 @@ func Serve() cli.ActionFunc {
 			return nil
 
 		case sig := <-sigCh:
-			log.Info("收到信号 ", sig, "，开始优雅关闭...")
+			log.Infof("received signal %v, starting shutdown...", sig)
 
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()

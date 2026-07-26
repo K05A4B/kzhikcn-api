@@ -20,15 +20,15 @@ func IsRevoked(ctx context.Context, t *TokenClaims) (revoked bool, err error) {
 	return cache.Exists(ctx, cache.Keys("http", "auth", "revokedTokens", t.ID))
 }
 
-func IssueToken(adminId uint, username string) (string, error) {
+func IssueToken(userID uint, username string, isAdmin bool) (string, error) {
 	now := time.Now()
 	conf := config.GetConf()
 
 	jwtConf := conf.Auth.JWT
 
 	claims := &TokenClaims{
-		IsAdmin: true,
-		AdminId: adminId,
+		IsAdmin: isAdmin,
+		AdminId: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.New().String(),
 			Issuer:    appinfo.CurrentInfo.Name,

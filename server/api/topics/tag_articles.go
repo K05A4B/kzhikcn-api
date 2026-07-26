@@ -3,68 +3,72 @@ package topics
 import (
 	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/queryfilter"
+	"kzhikcn/server/app"
 	"kzhikcn/server/common/authtoken"
 	"kzhikcn/pkg/hdl"
 	"kzhikcn/server/common/httputil"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
-var GetArticlesByTagHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	claims := authtoken.GetClaims(r.Context())
-	wt := queryfilter.WhiteList{
-		"id":             nil,
-		"title":          nil,
-		"views":          nil,
-		"likes":          nil,
-		"description":    nil,
-		"enable_comment": nil,
-		"custom_id":      nil,
-		"created_at":     queryfilter.TimeValueParser(),
-		"updated_at":     queryfilter.TimeValueParser(),
-	}
-
-	if claims != nil {
-		wt.Add("status")
-	}
-
-	applyExpr, err := httputil.UseExpression(r, wt)
-	if err != nil {
-		return httputil.InvalidExpression(err)
-	}
-
-	tag, err := getTagBase(r, func(tx *gorm.DB) *gorm.DB {
-		tx = tx.Select("id", "tag_name")
-		return tx.Preload("Articles", func(db *gorm.DB) *gorm.DB {
-
-			db = httputil.ApplyPagination(r, 20, 100, db)
-
-			if claims == nil {
-				db = db.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
-			}
-
-			db = db.Scopes(data.Adapter(applyExpr))
-
-			return db.Preload("Category").Preload("Tags")
-		})
-	})
-
-	if err != nil {
-		return err
-	}
-
-	resp.Data = tag
-	resp.Meta["count"] = len(tag.Articles)
-
-	httputil.SetTotal(resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
-		tx = tx.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
-			Where("article_tags.tag_id = ?", tag.ID)
-		if claims == nil {
-			tx = tx.Where("articles.status = ?", data.ARTICLE_STATUS_PUBLISHED)
+func GetArticlesByTag(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		claims := authtoken.GetClaims(r.Context())
+		wt := queryfilter.WhiteList{
+			"id": nil, "title": nil, "views": nil, "likes": nil,
+			"description": nil, "enable_comment": nil, "custom_id": nil,
+			"created_at": queryfilter.TimeValueParser(),
+			"updated_at": queryfilter.TimeValueParser(),
 		}
-		return tx.Scopes(data.Adapter(applyExpr))
-	})
+		if claims != nil {
+			wt.Add("status")
+		}
 
-	return nil
-})
+		applyExpr, err := httputil.UseExpression(r, wt)
+		if err != nil {
+			return httputil.InvalidExpression(err)
+		}
+
+		tag, err := appCtx.TopicSvc.GetTagByNameOrID(r.Context(), chi.URLParam(r, "tag"))
+		if err != nil {
+			return ErrTagNotFound
+		}
+
+		tags, err := data.GetTags(func(tx *gorm.DB) *gorm.DB {
+			tx = tx.Where("id=?", tag.ID).Limit(1).
+				Select("id", "tag_name").
+				Preload("Articles", func(db *gorm.DB) *gorm.DB {
+					db = httputil.ApplyPagination(r, 20, 100, db)
+					if claims == nil {
+						db = db.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
+					}
+					db = db.Scopes(data.Adapter(applyExpr))
+					return db.Preload("Category").Preload("Tags")
+				})
+			return tx
+		})
+		if err != nil {
+			return ErrTagsFindFailed.Wrap(err)
+		}
+		if len(tags) == 0 {
+			return ErrTagNotFound
+		}
+
+		t := tags[0]
+		resp.Data = t
+		resp.Meta["count"] = len(t.Articles)
+
+		httputil.SetTotal(resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
+			tx = tx.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
+				Where("article_tags.tag_id = ?", t.ID)
+			if claims == nil {
+				tx = tx.Where("articles.status = ?", data.ARTICLE_STATUS_PUBLISHED)
+			}
+			return tx.Scopes(data.Adapter(applyExpr))
+		})
+
+		return nil
+	})
+}

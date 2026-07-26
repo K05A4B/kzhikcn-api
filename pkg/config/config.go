@@ -99,6 +99,16 @@ type CacheConf struct {
 	Redis    CacheRedisConf `yaml:"redis"`
 }
 
+type CORSConf struct {
+	Enable           bool     `yaml:"enable"`
+	AllowedOrigins   []string `yaml:"allowed_origins"`
+	AllowedMethods   []string `yaml:"allowed_methods"`
+	AllowedHeaders   []string `yaml:"allowed_headers"`
+	ExposedHeaders   []string `yaml:"exposed_headers"`
+	AllowCredentials bool     `yaml:"allow_credentials"`
+	MaxAge           Duration `yaml:"max_age"`
+}
+
 type Config rawConfig
 
 type rawConfig struct {
@@ -113,6 +123,7 @@ type rawConfig struct {
 	Database Database  `yaml:"db"`
 	Log      LogConf   `yaml:"log"`
 	Cache    CacheConf `yaml:"cache"`
+	CORS     CORSConf  `yaml:"cors"`
 }
 
 func (c *Config) UnmarshalYAML(value *yaml.Node) error {
@@ -181,8 +192,4 @@ func GetConf() *Config {
 
 func Conf() *Config {
 	return GetConf()
-}
-
-func HookLoaded(fns ...func(*Config)) {
-	loadedHooks = append(loadedHooks, fns...)
 }

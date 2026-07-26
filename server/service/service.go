@@ -1,34 +1,31 @@
 package service
 
 import (
-	"context"
 	"kzhikcn/pkg/assets/article"
 	"kzhikcn/pkg/config"
-	"kzhikcn/pkg/data"
-	"kzhikcn/server/common/authtoken"
+
+	"gorm.io/gorm"
 )
+
+var ArticleOrderByMapping = map[string]string{
+	"publishedAt":      "published_at",
+	"publishedAt:desc": "published_at DESC",
+	"createdAt":        "created_at",
+	"createdAt:desc":   "created_at DESC",
+	"updatedAt":        "updated_at",
+	"updatedAt:desc":   "updated_at DESC",
+	"likes":            "likes",
+	"likes:desc":       "likes DESC",
+	"views":            "views",
+	"views:desc":       "views DESC",
+}
 
 type ServiceContext struct {
 	Conf *config.Config
 	Repo article.Repository
+	DB   *gorm.DB
 }
 
-type ArticleHooks struct {
-	BeforeCreate  []func(ctx context.Context, article *data.Article) error
-	AfterCreate   []func(ctx context.Context, article *data.Article) error
-	BeforePublish []func(ctx context.Context, article *data.Article) error
-	AfterPublish  []func(ctx context.Context, article *data.Article) error
-	BeforeDelete  []func(ctx context.Context, articleID string, isHard bool) error
-	AfterDelete   []func(ctx context.Context, articleID string, isHard bool) error
-}
-
-type AuthHooks struct {
-	OnLoginSuccess []func(ctx context.Context, admin *data.Admin) error
-	OnLoginFailed  []func(ctx context.Context, username, reason string) error
-	OnMFARequired  []func(ctx context.Context, admin *data.Admin) error
-	OnLogout       []func(ctx context.Context, claims *authtoken.TokenClaims) error
-}
-
-func NewServiceContext(conf *config.Config, repo article.Repository) *ServiceContext {
-	return &ServiceContext{Conf: conf, Repo: repo}
+func NewServiceContext(conf *config.Config, repo article.Repository, db *gorm.DB) *ServiceContext {
+	return &ServiceContext{Conf: conf, Repo: repo, DB: db}
 }
