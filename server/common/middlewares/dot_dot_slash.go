@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"kzhikcn/pkg/log"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
 	"net/http"
 	"net/url"
 	"strings"

@@ -2,9 +2,9 @@ package middlewares
 
 import (
 	"kzhikcn/pkg/config"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/pkg/log"
 	"kzhikcn/server/common/authtoken"
-	"kzhikcn/server/common/hdl"
 	"net"
 	"net/http"
 	"net/netip"
@@ -22,17 +22,12 @@ type httpRate struct {
 	apiKeys   map[string]struct{}
 }
 
-func HttpRate() func(http.Handler) http.Handler {
+func HttpRate(conf *config.Config) func(http.Handler) http.Handler {
 	r := &httpRate{
 		apiKeys: make(map[string]struct{}),
 	}
 
-	if config.Conf() == nil {
-		config.HookLoaded(r.preBuild)
-		return r.handler
-	}
-
-	r.preBuild(config.Conf())
+	r.preBuild(conf)
 
 	return r.handler
 }

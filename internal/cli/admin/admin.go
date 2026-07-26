@@ -1,10 +1,34 @@
 package cmdadmin
 
 import (
-	"kzhikcn/internal/cli/cliutils"
+	"kzhikcn/server/app"
 
 	"github.com/urfave/cli/v2"
 )
+
+// dbAction 封装了 admin 子命令中通用的"加载配置 + 连接数据库 + 迁移"逻辑。
+func dbAction(skip bool, action cli.ActionFunc) cli.ActionFunc {
+	return func(ctx *cli.Context) error {
+		if skip {
+			return action(ctx)
+		}
+
+		app := app.New()
+		configFile := ctx.String("config")
+
+		if err := app.Bootstrap(configFile); err != nil {
+			return err
+		}
+		if err := app.Initialize(); err != nil {
+			return err
+		}
+		if err := app.Migrate(); err != nil {
+			return err
+		}
+
+		return action(ctx)
+	}
+}
 
 var AdminCommands = &cli.Command{
 	Name:  "admin",
@@ -33,7 +57,7 @@ var AdminCommands = &cli.Command{
 					Usage:   "电子邮件",
 				},
 			},
-			Action: cliutils.ConnectDatabase(addAdmin),
+			Action: dbAction(false, addAdmin),
 		},
 		{
 			Name:      "modify",
@@ -70,7 +94,7 @@ var AdminCommands = &cli.Command{
 					Usage: "设置头像图片地址",
 				},
 			},
-			Action: cliutils.ConnectDatabase(modifyAdmin),
+			Action: dbAction(false, modifyAdmin),
 		},
 		{
 			Name:    "passwd",
@@ -89,7 +113,7 @@ var AdminCommands = &cli.Command{
 					Usage:   "新密码",
 				},
 			},
-			Action: cliutils.ConnectDatabase(changePassword),
+			Action: dbAction(false, changePassword),
 		},
 		{
 			Name:    "find",
@@ -103,7 +127,7 @@ var AdminCommands = &cli.Command{
 					Required: true,
 				},
 			},
-			Action: cliutils.ConnectDatabase(findAdminByName),
+			Action: dbAction(false, findAdminByName),
 		},
 	},
 }

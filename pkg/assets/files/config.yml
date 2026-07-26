@@ -78,6 +78,41 @@ http_rate:
     # "${HTTP_RATE_API_KEY_1}"
   ]
 
+cors:
+  enable: false
+
+  # Access-Control-Allow-Origin
+  # 指定哪些域可以访问资源。值可以是具体的域名（如 https://example.com）或 *（允许所有域）
+  allowed_origins: [
+    # "https://*.example.com",
+    # "http://*.example.com",
+    # "http://*.cn",
+    # "http://foo.bar.example"
+  ]
+
+  # Access-Control-Allow-Headers
+  # 指定实际请求中允许携带的自定义头部字段（如 X-Requested-With, Content-Type）
+  allowed_headers: [
+    # "Accept",
+    # "Authorization",
+    # "Content-Type",
+    # "X-CSRF-Token"
+  ]
+
+  # Access-Control-Expose-Headers
+  # 默认情况下，浏览器只允许前端访问少数基础响应头（如 Cache-Control）。此头部用于列出允许前端 JavaScript 访问的额外响应头（如 Authorization）。
+  exposed_headers: [
+    # "Authorization"
+  ]
+
+  # Access-Control-Max-Age
+  # 指定预检请求（Preflight，即 OPTIONS 请求）的结果可以被缓存多长时间，以减少重复的预检请求。
+  max_age: 600s
+
+  # Access-Control-Allow-Credentials
+  # 指定是否允许浏览器携带凭证信息（如 Cookies、HTTP 认证信息）。值为 true 时，Allow-Origin 不能设为 *，必须指定具体域名。
+  allow_credentials: false
+
 # 数据库配置
 db:
   # 数据库驱动目前支持 sqlite3（mysql未测试）

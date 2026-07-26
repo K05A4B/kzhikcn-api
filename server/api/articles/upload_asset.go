@@ -1,54 +1,35 @@
 package articles
 
 import (
-	"io"
-	"kzhikcn/pkg/assets"
-	"kzhikcn/pkg/utils"
-	"kzhikcn/server/common/hdl"
-
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"net/http"
 	"path/filepath"
 	"strings"
 
-	"gorm.io/gorm"
+	"github.com/go-chi/chi/v5"
 )
 
-var UploadArticleAssetHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Select("id").Limit(1)
+func UploadArticleAsset(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		articleID := chi.URLParam(r, "article_id")
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			return ErrAssetsFileMissing.Wrap(err)
+		}
+
+		filename := filepath.Base(header.Filename)
+		if strings.HasPrefix(filename, "..") || strings.HasPrefix(filename, "/") {
+			return ErrAssetsInvalidFilename
+		}
+
+		err = appCtx.ArticleSvc.UploadAsset(r.Context(), articleID, filename, file)
+		if err != nil {
+			return ErrAssetsUploadFailed.Wrap(err)
+		}
+
+		resp.Data = filename
+		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		return ErrAssetsFileMissing.Wrap(err)
-	}
-
-	filename := header.Filename
-
-	filename = filepath.Base(filename)
-	if strings.HasPrefix(filename, "..") || strings.HasPrefix(filename, "/") {
-		return ErrAssetsInvalidFilename
-	}
-
-	if utils.IsEmptyString(filename) {
-		return ErrAssetsFilenameIsRequired
-	}
-
-	wr, err := assets.ArticlesRepo.OpenAsset(article.ID.String(), filename)
-	if err != nil {
-		return ErrAssetsOpenFailed.Wrap(err)
-	}
-
-	defer wr.Close()
-
-	_, err = io.Copy(wr, file)
-	if err != nil {
-		return ErrAssetsUploadFailed.Wrap(err)
-	}
-	resp.Data = filename
-
-	return nil
-})
+}

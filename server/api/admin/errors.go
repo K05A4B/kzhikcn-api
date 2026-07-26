@@ -1,6 +1,6 @@
 package admin
 
-import "kzhikcn/server/common/hdl"
+import "kzhikcn/pkg/hdl"
 
 var (
 	ErrAdminNotFound              = hdl.DefineError(404, "没有找到对应管理员", "users.admin.not_found")

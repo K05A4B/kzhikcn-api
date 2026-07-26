@@ -1,33 +1,22 @@
 package articles
 
 import (
-	"io"
-	"kzhikcn/pkg/assets"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/go-chi/chi/v5"
 )
 
-var UpdateArticleRawContentHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Select("id").Limit(1)
+func UpdateArticleRawContent(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		articleID := chi.URLParam(r, "article_id")
+
+		err := appCtx.ArticleSvc.UpdateContent(r.Context(), articleID, r.Body)
+		if err != nil {
+			return ErrContentWriteFailed.Wrap(err)
+		}
+
+		return nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	writer, err := assets.ArticlesRepo.ContentWriter(article.ID.String())
-	if err != nil {
-		return ErrContentWriteFailed.Wrap(err)
-	}
-
-	defer writer.Close()
-	_, err = io.Copy(writer, r.Body)
-	if err != nil {
-		return ErrContentWriteFailed.Wrap(err)
-	}
-
-	return nil
-})
+}

@@ -1,15 +1,14 @@
 package admin
 
 import (
-	"errors"
-	"kzhikcn/pkg/data"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/pkg/utils"
+	"kzhikcn/server/app"
 	"kzhikcn/server/common/authtoken"
-	"kzhikcn/server/common/hdl"
-	"kzhikcn/server/common/secutils"
+	"kzhikcn/server/service"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/pkg/errors"
 )
 
 type ChangePasswordRequest struct {
@@ -17,53 +16,34 @@ type ChangePasswordRequest struct {
 	OldPassword string `json:"oldPassword"`
 }
 
-var ChangePasswordHandler = hdl.NewHandler(
-	func(r *http.Request, resp *hdl.Response, payload ChangePasswordRequest) error {
-		claims := authtoken.GetClaims(r.Context())
-		admin, err := data.GetAdminById(claims.AdminId, func(tx *gorm.DB) *gorm.DB {
-			return tx.Select("id", "password")
-		})
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrAdminNotFound
-		}
+func ChangePassword(appCtx *app.AppContext) hdl.Handler[ChangePasswordRequest] {
+	return hdl.NewHandler(
+		func(r *http.Request, resp *hdl.Response, payload ChangePasswordRequest) error {
+			claims := authtoken.GetClaims(r.Context())
 
-		if err != nil {
-			return ErrFindAdminFailed.Wrap(err)
-		}
+			err := appCtx.AdminSvc.ChangePassword(r.Context(), claims.AdminId, payload.OldPassword, payload.NewPassword)
+			if errors.Is(err, service.ErrAdminValidateFailed) {
+				return ErrAdminValidateFailed
+			}
+			if errors.Is(err, service.ErrAdminComparePasswordFail) {
+				return ErrAdminComparePasswordFailed.Wrap(err)
+			}
+			if err != nil {
+				return ErrChangePasswordFailed.Wrap(err)
+			}
 
-		ok, err := secutils.ComparePassword(admin.Password, payload.OldPassword)
-		if err != nil {
-			return ErrAdminComparePasswordFailed.Wrap(err)
-		}
+			return nil
+		},
 
-		if !ok {
-			return ErrAdminValidateFailed
-		}
-
-		admin.Password = []byte(payload.NewPassword)
-
-		err = data.UpdateAdminByID(claims.AdminId, admin, func(tx *gorm.DB) *gorm.DB {
-			return tx.Select("password")
-		})
-
-		if err != nil {
-			return ErrChangePasswordFailed.Wrap(err)
-		}
-
-		return nil
-	},
-
-	hdl.MissingFields(func(payload ChangePasswordRequest) []string {
-		fields := []string{}
-
-		if utils.IsEmptyString(payload.OldPassword) {
-			fields = append(fields, "oldPassword")
-		}
-
-		if utils.IsEmptyString(payload.NewPassword) {
-			fields = append(fields, "newPassword")
-		}
-
-		return fields
-	}),
-)
+		hdl.MissingFields(func(payload ChangePasswordRequest) []string {
+			fields := []string{}
+			if utils.IsEmptyString(payload.OldPassword) {
+				fields = append(fields, "oldPassword")
+			}
+			if utils.IsEmptyString(payload.NewPassword) {
+				fields = append(fields, "newPassword")
+			}
+			return fields
+		}),
+	)
+}

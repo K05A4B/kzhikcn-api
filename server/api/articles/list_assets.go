@@ -1,32 +1,23 @@
 package articles
 
 import (
-	"kzhikcn/pkg/assets"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/go-chi/chi/v5"
 )
 
-var ListArticleAssetsHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Select("id").Limit(1)
-	})
-	if err != nil {
-		return err
-	}
+func ListArticleAssets(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		articleID := chi.URLParam(r, "article_id")
 
-	list, err := assets.ArticlesRepo.ListAssets(article.ID.String())
-	if err == assets.ErrAssetsDirNotFound {
-		resp.Data = []string{}
+		list, err := appCtx.ArticleSvc.ListAssets(r.Context(), articleID)
+		if err != nil {
+			return ErrAssetsListFailed.Wrap(err)
+		}
+
+		resp.Data = list
 		return nil
-	}
-
-	if err != nil {
-		return ErrAssetsListFailed.Wrap(err)
-	}
-
-	resp.Data = list
-
-	return nil
-})
+	})
+}

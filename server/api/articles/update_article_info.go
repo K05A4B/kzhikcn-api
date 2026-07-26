@@ -1,30 +1,27 @@
 package articles
 
 import (
-	"kzhikcn/pkg/data"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
+	"kzhikcn/server/service"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/go-chi/chi/v5"
 )
 
-var UpdateArticleInfoHandler = hdl.NewHandler(func(r *http.Request, resp *hdl.Response, payload data.EditableArticle) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Preload("Tags").Preload("Category")
+func UpdateArticleInfo(appCtx *app.AppContext) hdl.Handler[service.ArticleUpdateFields] {
+	return hdl.NewHandler(func(r *http.Request, resp *hdl.Response, payload service.ArticleUpdateFields) error {
+		articleID := chi.URLParam(r, "article_id")
+
+		article, err := appCtx.ArticleSvc.Update(r.Context(), articleID, payload)
+		if err == service.ErrCategoryNotFound {
+			return ErrCategoryNotFound
+		}
+		if err != nil {
+			return ErrUpdateArticleInfoFailed.Wrap(err)
+		}
+
+		resp.Data = article
+		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	err = article.Update(payload)
-	if err == data.ErrCategoryNotFound {
-		return ErrCategoryNotFound
-	}
-	if err != nil {
-		return ErrUpdateArticleInfoFailed.Wrap(err)
-	}
-
-	resp.Data = article
-
-	return nil
-})
+}

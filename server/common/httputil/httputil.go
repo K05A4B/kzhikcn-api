@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"kzhikcn/pkg/data"
+	"kzhikcn/pkg/hdl"
 	"kzhikcn/pkg/log"
 	"kzhikcn/pkg/queryfilter"
 	"kzhikcn/pkg/utils"
-	"kzhikcn/server/common/hdl"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -51,8 +51,12 @@ func QueryBool(r *http.Request, key string, defaultValue bool) bool {
 }
 
 func QueryInt(r *http.Request, key string, defaultValue int) int {
-	res, _ := strconv.Atoi(QueryString(r, key, strconv.Itoa(defaultValue)))
-	return res
+	value := QueryString(r, key, "")
+	if value == "" {
+		return defaultValue
+	}
+	res, _ := strconv.Atoi(value)
+	return int(res)
 }
 
 func WithMarks(r *http.Request, marks ...string) *http.Request {

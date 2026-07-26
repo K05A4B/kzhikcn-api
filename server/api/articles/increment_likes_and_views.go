@@ -1,49 +1,37 @@
 package articles
 
 import (
-	"kzhikcn/pkg/data"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/go-chi/chi/v5"
 )
 
-var IncrementArticleLikesHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
+func IncrementArticleLikes(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		articleID := chi.URLParam(r, "article_id")
+
+		likes, err := appCtx.ArticleSvc.IncrementLikes(r.Context(), articleID)
+		if err != nil {
+			return ErrUpdateArticleLikesFailed.Wrap(err)
+		}
+
+		resp.Data = map[string]any{"likes": likes}
+		return nil
 	})
-	if err != nil {
-		return err
-	}
+}
 
-	likes, err := article.IncrementLikes()
-	if err != nil {
-		return ErrUpdateArticleLikesFailed.Wrap(err)
-	}
+func IncrementArticleViews(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		articleID := chi.URLParam(r, "article_id")
 
-	resp.Data = map[string]any{
-		"likes": likes,
-	}
+		views, err := appCtx.ArticleSvc.IncrementViews(r.Context(), articleID)
+		if err != nil {
+			return ErrUpdateArticleViewsFailed.Wrap(err)
+		}
 
-	return nil
-})
-
-var IncrementArticleViewsHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
+		resp.Data = map[string]any{"views": views}
+		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	views, err := article.IncrementViews()
-	if err != nil {
-		return ErrUpdateArticleViewsFailed.Wrap(err)
-	}
-
-	resp.Data = map[string]any{
-		"views": views,
-	}
-
-	return nil
-})
+}

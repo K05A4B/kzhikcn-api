@@ -1,92 +1,61 @@
 package articles
 
 import (
-	"bytes"
 	"io"
-	"kzhikcn/pkg/assets"
-	"kzhikcn/pkg/data"
-	"kzhikcn/server/common/articlemd"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/assets/article"
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"kzhikcn/server/common/httputil"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/go-chi/chi/v5"
+	"github.com/pkg/errors"
 )
 
-var GetArticleContentHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Select("id").Limit(1)
+func GetArticleContent(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		articleID := chi.URLParam(r, "article_id")
+
+		reader, err := appCtx.ArticleSvc.GetContent(r.Context(), articleID)
+		if errors.Is(err, article.ErrContentNotFound) {
+			return ErrContentNotFound
+		}
+		if err != nil {
+			return ErrContentLoadFailed.Wrap(err)
+		}
+		defer reader.Close()
+
+		if httputil.Accepts(r, "text/markdown", "text/html", "text/plain") {
+			return hdl.WriteRaw(r, reader, "text/plain; charset=utf-8")
+		}
+
+		data, err := io.ReadAll(reader)
+		if err != nil {
+			return ErrContentLoadFailed.Wrap(err)
+		}
+
+		resp.Data = string(data)
+		return nil
 	})
+}
 
-	if err != nil {
-		return err
-	}
+func GetArticleRenderedContent(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		articleID := chi.URLParam(r, "article_id")
 
-	reader, err := assets.ArticlesRepo.ContentReader(article.ID.String())
-	if err == assets.ErrContentNotFound {
-		return ErrContentNotFound
-	}
+		content, err := appCtx.ArticleSvc.GetRenderedContent(r.Context(), articleID)
+		if errors.Is(err, article.ErrContentNotFound) {
+			return ErrContentNotFound
+		}
+		if err != nil {
+			return ErrContentRenderFailed.Wrap(err)
+		}
 
-	if err != nil {
-		return ErrContentLoadFailed.Wrap(err)
-	}
+		if httputil.Accepts(r, "text/html") {
+			return hdl.WriteRawData(r, content, "text/html; charset=utf-8")
+		}
 
-	defer reader.Close()
-
-	if httputil.Accepts(r, "text/markdown", "text/html", "text/plain") {
-		return hdl.WriteRaw(r, reader, "text/plain; charset=utf-8")
-	}
-
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return ErrContentLoadFailed.Wrap(err)
-	}
-
-	resp.Data = string(data)
-
-	return nil
-})
-
-var GetArticleRenderedContentHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		return tx.Select("id", "custom_id").
-			Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
+		resp.Data = string(content)
+		return nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	var buf bytes.Buffer
-	err = articleRenderedContent(article.ID.String(), &buf)
-	if err == assets.ErrContentNotFound {
-		return ErrContentNotFound
-	}
-
-	if err != nil {
-		return ErrContentRenderFailed.Wrap(err)
-	}
-
-	if httputil.Accepts(r, "text/html") {
-		return hdl.WriteRawData(r, buf.Bytes(), "text/html; charset=utf-8")
-	}
-
-	resp.Data = buf.String()
-
-	return nil
-})
-
-func articleRenderedContent(articleId string, w io.Writer) error {
-	reader, err := assets.ArticlesRepo.ContentReader(articleId)
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
-
-	content, err := io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-
-	return articlemd.ParseDocument(content, w)
 }

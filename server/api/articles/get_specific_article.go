@@ -2,66 +2,38 @@ package articles
 
 import (
 	"kzhikcn/pkg/data"
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
 	"kzhikcn/server/common/authtoken"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/server/service"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/go-chi/chi/v5"
 )
 
 // 精确查询文章信息
 // GET /api/v1/articles/{article_id}
-//
-// 认证要求:
-//   - 无需认证
-//
-// 请求类型:
-//   - Content-Type: application/json
-//
-// 请求参数: 无
+func SpecificArticle(appCtx *app.AppContext) hdl.Handler[any] {
+	return hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
+		claims := authtoken.GetClaims(r.Context())
+		omitStatus := []data.ArticleStatus{}
 
-// 查询参数：无
-//
-// 响应数据:
-//
-//	data:
-//		- id (string):  文章ID
-//		-	createdAt (string): 文章创建时间 (ISO8601)
-//		-	updatedAt (string): 文章更新时间 (ISO8601)
-//		-	publishedAt (string): 文章发布时间 (ISO8601)
-//		-	customID (string): 文章自定义ID
-//		-	title (string): 文章标题
-//		-	views (int): 文章浏览量
-//		-	likes (int): 文章点赞量
-//		-	categoryID (int | null): 分类ID (没有则为null)
-//		-	category (object): 分类详细信息
-//				-	id (int): 分类ID (没有则为0)
-//				- categoryName (string): 分类名称
-//		-	tags: [
-//				- id (int): 标签ID
-//				- tagName (string): 标签名
-//			],
-//		-	status (string): 文章状态
-//			- 取值范围: published, hidden, draft
-//		-	description (string): 文章描述
-//		-	enableComment (bool): 是否启用评论
-var SpecificArticleHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Response) error {
-	claims := authtoken.GetClaims(r.Context())
-
-	article, err := getArticleBase(r, func(tx *gorm.DB) *gorm.DB {
-		tx = tx.Limit(1).Preload("Category").Preload("Tags")
 		if claims == nil || !claims.IsAdmin {
-			return tx.Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
+			omitStatus = append(omitStatus, data.ARTICLE_STATUS_DRAFT)
 		}
 
-		return tx
+		article, err := appCtx.ArticleSvc.GetArticle(r.Context(), chi.URLParam(r, "article_id"))
+
+		if err == service.ErrArticleNotFound {
+			return ErrArticleNotFound
+		}
+
+		if err != nil {
+			return ErrFindArticleFailed.Wrap(err)
+		}
+
+		resp.Data = article
+
+		return nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	resp.Data = article
-
-	return nil
-})
+}

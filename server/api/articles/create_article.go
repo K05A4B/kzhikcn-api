@@ -1,54 +1,33 @@
 package articles
 
 import (
-	"kzhikcn/pkg/data"
-	"kzhikcn/pkg/utils"
-	"kzhikcn/server/common/hdl"
+	"kzhikcn/pkg/hdl"
+	"kzhikcn/server/app"
+	"kzhikcn/server/service"
 	"net/http"
-
-	"gorm.io/gorm"
 )
 
-var CreateArticleHandler = hdl.NewHandler(
-	func(r *http.Request, resp *hdl.Response, payload data.EditableArticle) error {
-		omittedFields := []string{}
+func CreateArticle(appCtx *app.AppContext) hdl.Handler[service.ArticleUpdateFields] {
+	return hdl.NewHandler(
+		func(r *http.Request, resp *hdl.Response, payload service.ArticleUpdateFields) error {
+			article, err := appCtx.ArticleSvc.Create(r.Context(), &payload)
+			if err == service.ErrCategoryNotFound {
+				return ErrCategoryNotFound
+			}
+			if err != nil {
+				return ErrCreateArticleFailed.Wrap(err)
+			}
 
-		if payload.EnableComment == nil {
-			omittedFields = append(omittedFields, "enable_comment")
-		}
+			resp.Data = article
+			return nil
+		},
 
-		if utils.IsEmptyString(payload.Description) {
-			omittedFields = append(omittedFields, "description")
-		}
-
-		if utils.IsEmptyString(payload.CoverImage) {
-			omittedFields = append(omittedFields, "cover_image")
-		}
-
-		article, err := data.CreateArticle(payload, func(tx *gorm.DB) *gorm.DB {
-			return tx.Omit(omittedFields...)
-		})
-
-		if err == data.ErrCategoryNotFound {
-			return ErrCategoryNotFound
-		}
-
-		if err != nil {
-			return ErrCreateArticleFailed.Wrap(err)
-		}
-
-		resp.Data = article
-
-		return nil
-	},
-
-	hdl.MissingFields(func(payload data.EditableArticle) []string {
-		missing := []string{}
-
-		if utils.IsEmptyString(payload.Title) {
-			missing = append(missing, "title")
-		}
-
-		return missing
-	}),
-)
+		hdl.MissingFields(func(payload service.ArticleUpdateFields) []string {
+			missing := []string{}
+			if payload.Title == nil || *payload.Title == "" {
+				missing = append(missing, "title")
+			}
+			return missing
+		}),
+	)
+}

@@ -68,3 +68,11 @@ func OnlyID(tx *gorm.DB) *gorm.DB {
 func OnlyCustomID(tx *gorm.DB) *gorm.DB {
 	return tx.Select("custom_id")
 }
+
+func Pagination(page, limit int) func(tx *gorm.DB) *gorm.DB {
+	return func(tx *gorm.DB) *gorm.DB {
+		tx = tx.Limit(int(limit))
+		tx = tx.Offset(int((page - 1) * limit))
+		return tx
+	}
+}
