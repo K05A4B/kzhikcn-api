@@ -20,6 +20,8 @@ var (
 // 前八字节为时间戳，剩下的为 nonce
 type TraceID []byte
 
+var EmptyID *TraceID = New(0)
+
 func New(nonceSize int) *TraceID {
 	id, err := NewTraceID(rand.Reader, nonceSize)
 	if err != nil {
@@ -56,6 +58,9 @@ func (id TraceID) Timestamp() int64 {
 }
 
 func (id TraceID) Nonce() []byte {
+	if len(id) < 8 {
+		return nil
+	}
 	return slices.Clone(id[8:])
 }
 

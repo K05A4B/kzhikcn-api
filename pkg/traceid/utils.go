@@ -13,7 +13,10 @@ func WithTraceID(ctx context.Context, id TraceID) context.Context {
 func GetTraceID(ctx context.Context) TraceID {
 	traceId := ctx.Value(traceIdCtxKey)
 	if traceId != nil {
-		return traceId.(TraceID)
+		id, ok := traceId.(TraceID)
+		if ok {
+			return id
+		}
 	}
 
 	return nil

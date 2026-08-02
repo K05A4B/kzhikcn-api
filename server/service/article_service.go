@@ -303,7 +303,14 @@ func (svc *ArticleService) Create(ctx context.Context, ea *ArticleUpdateFields) 
 }
 
 func (svc *ArticleService) Delete(ctx context.Context, id string, isHard bool) error {
-	article, err := getArticleByID(id, data.OnlyID)
+	article, err := getArticleByID(id, data.OnlyID, func(tx *gorm.DB) *gorm.DB {
+		if isHard {
+			// 修复无法删除标记为已删除的文章的bug
+			return tx.Unscoped()
+		}
+
+		return tx
+	})
 	if err != nil {
 		return err
 	}
@@ -325,8 +332,8 @@ func (svc *ArticleService) Delete(ctx context.Context, id string, isHard bool) e
 		if err := tx.Delete(article).Error; err != nil {
 			return err
 		}
-		svc.ctx.Repo.Remove(article.ID.String())
-		return nil
+
+		return svc.ctx.Repo.Remove(article.ID.String())
 	})
 
 	if err != nil {

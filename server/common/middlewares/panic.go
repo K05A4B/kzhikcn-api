@@ -16,12 +16,12 @@ func Recover(h http.Handler) http.Handler {
 		defer func() {
 			recoverErr := recover()
 			if recoverErr != nil {
-				traceID := traceid.GetTraceID(r.Context()).String()
+				traceID := traceid.GetTraceID(r.Context())
 				stackBuf := make([]byte, 1024*8)
 				n := runtime.Stack(stackBuf, false)
 
 				err := errors.Wrapf(errors.New(fmt.Sprint(recoverErr)), "[PanicCapturer] Panic recovered")
-				log.WithTraceID(traceID).Errorf("%s\nstacks:\n%s", err, stackBuf[:n])
+				log.WithTraceID(traceID.String()).Errorf("%s\nstacks:\n%s", err, stackBuf[:n])
 
 				httputil.HttpError(500, err, w, r, 3)
 			}
