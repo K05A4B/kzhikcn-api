@@ -31,6 +31,9 @@ func NewRouter(app *app.App) chi.Router {
 	r.NotFound(hdl.New(NotFoundHandler))
 	r.MethodNotAllowed(hdl.New(MethodNotAllowedHandler))
 
+	// 为每个请求添加traceID
+	r.Use(middlewares.WithTraceID)
+
 	r.Use(middlewares.CORS(app.Config.CORS))
 
 	// 从header中获取真实IP
@@ -40,11 +43,9 @@ func NewRouter(app *app.App) chi.Router {
 	// 3. X-Forwarded-For
 	r.Use(chiMiddleware.RealIP)
 
-	// 为每个请求添加traceID
-	r.Use(middlewares.WithTraceID)
-
 	r.Use(middlewares.Recover)
 	r.Use(middlewares.DotDotSlash)
+	r.Use(middlewares.AccessLog)
 
 	r.Mount("/api/", apiRouter(app))
 
