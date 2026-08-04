@@ -430,20 +430,20 @@ func (svc *ArticleService) GetArticle(ctx context.Context, id string) (*data.Art
 }
 
 func (svc *ArticleService) GetContent(ctx context.Context, articleID string) (io.ReadCloser, error) {
-	_, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(articleID, data.OnlyID)
 	if err != nil {
 		return nil, err
 	}
-	return svc.ctx.Repo.ContentReader(articleID)
+	return svc.ctx.Repo.ContentReader(article.ID.String())
 }
 
 func (svc *ArticleService) UpdateContent(ctx context.Context, articleID string, reader io.Reader) error {
-	_, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(articleID, data.OnlyID)
 	if err != nil {
 		return err
 	}
 
-	writer, err := svc.ctx.Repo.ContentWriter(articleID)
+	writer, err := svc.ctx.Repo.ContentWriter(article.ID.String())
 	if err != nil {
 		return err
 	}
@@ -454,7 +454,7 @@ func (svc *ArticleService) UpdateContent(ctx context.Context, articleID string, 
 }
 
 func (svc *ArticleService) GetRenderedContent(ctx context.Context, articleID string) ([]byte, error) {
-	_, err := getArticleByID(articleID, func(tx *gorm.DB) *gorm.DB {
+	article, err := getArticleByID(articleID, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("id").Where("status IN ?",
 			[]data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
 	})
@@ -462,7 +462,8 @@ func (svc *ArticleService) GetRenderedContent(ctx context.Context, articleID str
 		return nil, err
 	}
 
-	reader, err := svc.ctx.Repo.ContentReader(articleID)
+	// fix: 修复自定义ID导致无法读取到文章内容的bug
+	reader, err := svc.ctx.Repo.ContentReader(article.ID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +483,7 @@ func (svc *ArticleService) GetRenderedContent(ctx context.Context, articleID str
 }
 
 func (svc *ArticleService) UploadAsset(ctx context.Context, articleID, filename string, file io.Reader) error {
-	_, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(articleID, data.OnlyID)
 	if err != nil {
 		return err
 	}
@@ -495,7 +496,7 @@ func (svc *ArticleService) UploadAsset(ctx context.Context, articleID, filename 
 		return errors.New("filename is required")
 	}
 
-	wr, err := svc.ctx.Repo.OpenAsset(articleID, filename)
+	wr, err := svc.ctx.Repo.OpenAsset(article.ID.String(), filename)
 	if err != nil {
 		return err
 	}
@@ -506,20 +507,20 @@ func (svc *ArticleService) UploadAsset(ctx context.Context, articleID, filename 
 }
 
 func (svc *ArticleService) DeleteAsset(ctx context.Context, articleID, filename string) error {
-	_, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(articleID, data.OnlyID)
 	if err != nil {
 		return err
 	}
-	return svc.ctx.Repo.RemoveAsset(articleID, filename)
+	return svc.ctx.Repo.RemoveAsset(article.ID.String(), filename)
 }
 
 func (svc *ArticleService) ListAssets(ctx context.Context, articleID string) ([]string, error) {
-	_, err := getArticleByID(articleID, data.OnlyID)
+	articleEntity, err := getArticleByID(articleID, data.OnlyID)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := svc.ctx.Repo.ListAssets(articleID)
+	list, err := svc.ctx.Repo.ListAssets(articleEntity.ID.String())
 	if errors.Is(err, article.ErrAssetsDirNotFound) {
 		return []string{}, nil
 	}
