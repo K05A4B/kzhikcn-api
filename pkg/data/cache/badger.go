@@ -2,11 +2,32 @@ package cache
 
 import (
 	"context"
+	"kzhikcn/pkg/log"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/pkg/errors"
 )
+
+// badgerLogger 将 badger 内部日志桥接到 pkg/log。
+// 不缓存 logger 实例，以便日志级别热更新生效；Infof 降级为 debug 以减少启动噪音。
+type badgerLogger struct{}
+
+func (badgerLogger) Errorf(msg string, args ...any) {
+	log.GetLogger().Errorf(msg, args...)
+}
+
+func (badgerLogger) Warningf(msg string, args ...any) {
+	log.GetLogger().Warnf(msg, args...)
+}
+
+func (badgerLogger) Infof(msg string, args ...any) {
+	log.GetLogger().Debugf(msg, args...)
+}
+
+func (badgerLogger) Debugf(msg string, args ...any) {
+	log.GetLogger().Debugf(msg, args...)
+}
 
 type BadgerCache struct {
 	db *badger.DB

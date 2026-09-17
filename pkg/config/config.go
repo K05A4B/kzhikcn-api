@@ -34,8 +34,7 @@ type HttpRate struct {
 }
 
 type Auth struct {
-	TOTPMasterKey string `yaml:"totp_master_key"`
-	JWT           struct {
+	JWT struct {
 		Secret string   `yaml:"secret"`
 		Expiry Duration `yaml:"expiry"`
 	} `yaml:"jwt"`

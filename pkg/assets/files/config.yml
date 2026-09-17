@@ -18,12 +18,12 @@ cache:
 
   # Redis 缓存配置（启用时需将 provider 设为 redis）
   redis:
-    host: localhost        # Redis 服务地址
-    port: 6379            # Redis 服务端口
-    prefix: "kzhikcn:"    # 缓存键前缀，避免与其他应用冲突
-    # timeout: 10s        # 连接超时时间
-    # password: ""        # Redis 密码（如有）
-    # db: 0               # 数据库编号
+    addr: localhost:6379   # Redis 服务地址 (host:port)
+    prefix: "kzhikcn:"     # 缓存键前缀，避免与其他应用冲突
+    # username: ""         # Redis 用户名（Redis 6+ ACL）
+    # timeout: 10s         # 连接超时时间
+    # password: ""         # Redis 密码（如有）
+    # db: 0                # 数据库编号
 
 
 # 机器可读资源配置

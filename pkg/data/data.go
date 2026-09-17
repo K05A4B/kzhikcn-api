@@ -2,7 +2,6 @@ package data
 
 import (
 	"database/sql"
-	"kzhikcn/pkg/log"
 	"kzhikcn/pkg/utils"
 	"os"
 	"path/filepath"
@@ -61,9 +60,9 @@ func ConnectDatabase(driverName, dsn string) (err error) {
 	}
 
 	if utils.IsDevelopment() {
-		db.Logger = &gormLogger{logger: *log.GetLogger()}
+		db.Logger = (&gormLogger{}).LogMode(logger.Info)
 	} else {
-		db.Logger = (&gormLogger{logger: *log.GetLogger()}).LogMode(logger.Warn)
+		db.Logger = (&gormLogger{}).LogMode(logger.Warn)
 	}
 
 	for _, fn := range onConnectedHooks.Raw() {
@@ -158,9 +157,10 @@ func DB() *gorm.DB {
 	return db
 }
 
+// CloseDB 关闭数据库连接并重置全局实例，允许之后重新连接及重复调用。
 func CloseDB() error {
-	mu.RLock()
-	defer mu.RUnlock()
+	mu.Lock()
+	defer mu.Unlock()
 	if db == nil {
 		return nil
 	}
@@ -168,7 +168,9 @@ func CloseDB() error {
 	if err != nil {
 		return err
 	}
-	return sqlDB.Close()
+	err = sqlDB.Close()
+	db = nil
+	return err
 }
 
 func GetDriverName() string {

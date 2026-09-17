@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"kzhikcn/pkg/config"
-	"kzhikcn/pkg/log"
 	"strings"
 	"time"
 
@@ -42,6 +41,7 @@ func initBadger(conf config.CacheLocalConf) error {
 	opt := badger.DefaultOptions(conf.Dir)
 	opt.ValueLogFileSize = conf.ValueLogFileSize.Int64()
 	opt.MemTableSize = conf.MemTableSize.Int64()
+	opt.Logger = badgerLogger{}
 
 	if opt.ValueLogFileSize == 0 {
 		opt.ValueLogFileSize = 64 * 1024 * 1024
@@ -50,8 +50,6 @@ func initBadger(conf config.CacheLocalConf) error {
 	if opt.MemTableSize == 0 {
 		opt.MemTableSize = 8 * 1024 * 1024
 	}
-
-	log.Debug(opt.ValueLogFileSize)
 
 	db, err := badger.Open(opt)
 	if err != nil {
@@ -75,11 +73,20 @@ func initBadger(conf config.CacheLocalConf) error {
 }
 
 func initRedis(conf config.CacheRedisConf) error {
-	client := redis.NewClient(&redis.Options{
+	opts := &redis.Options{
 		Addr:     conf.Addr,
 		Username: conf.Username,
 		Password: conf.Password,
-	})
+		DB:       conf.DB,
+	}
+
+	if timeout := conf.Timeout.Duration(); timeout > 0 {
+		opts.DialTimeout = timeout
+		opts.ReadTimeout = timeout
+		opts.WriteTimeout = timeout
+	}
+
+	client := redis.NewClient(opts)
 
 	cache = &RedisCache{
 		client: client,
@@ -132,8 +139,15 @@ func GetJson(ctx context.Context, key string, v any) error {
 	return json.Unmarshal(d, v)
 }
 
+// CloseCache 关闭缓存并重置全局实例，允许重复调用。
 func CloseCache() error {
-	return cache.Close()
+	if cache == nil {
+		return nil
+	}
+
+	err := cache.Close()
+	cache = nil
+	return err
 }
 
 func Keys(v ...string) string {

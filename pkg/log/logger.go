@@ -2,12 +2,17 @@ package log
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/rs/zerolog"
 )
 
 type Logger struct {
 	zerolog *zerolog.Logger
+}
+
+func NewLogger(logger *zerolog.Logger) *Logger {
+	return &Logger{zerolog: logger}
 }
 
 func (l *Logger) WithTraceID(traceID string) *Logger {
@@ -49,21 +54,37 @@ func (l *Logger) Warnf(format string, v ...any) {
 }
 
 func (l *Logger) Error(v ...any) {
-	l.zerolog.Error().Msg(fmt.Sprint(v...))
+	l.log(zerolog.ErrorLevel, 3, fmt.Sprint(v...))
 }
 
 func (l *Logger) Errorf(format string, v ...any) {
-	l.zerolog.Error().Msgf(format, v...)
+	l.logf(zerolog.ErrorLevel, 3, format, v...)
 }
 
 func (l *Logger) Fatal(v ...any) {
-	l.zerolog.Fatal().Msg(fmt.Sprint(v...))
+	l.log(zerolog.FatalLevel, 3, fmt.Sprint(v...))
+	os.Exit(1)
 }
 
 func (l *Logger) Fatalf(format string, v ...any) {
-	l.zerolog.Fatal().Msgf(format, v...)
+	l.logf(zerolog.FatalLevel, 3, format, v...)
+	os.Exit(1)
 }
 
-func NewLogger(logger *zerolog.Logger) *Logger {
-	return &Logger{zerolog: logger}
+// log 在错误及以上级别附加 caller 字段。
+// skip 需与调用链匹配：caller -> log -> 调用方 -> 用户代码。
+func (l *Logger) log(level zerolog.Level, skip int, msg string) {
+	ev := l.zerolog.WithLevel(level)
+	if ev != nil && level >= zerolog.ErrorLevel {
+		ev = ev.Str("caller", caller(skip))
+	}
+	ev.Msg(msg)
+}
+
+func (l *Logger) logf(level zerolog.Level, skip int, format string, v ...any) {
+	ev := l.zerolog.WithLevel(level)
+	if ev != nil && level >= zerolog.ErrorLevel {
+		ev = ev.Str("caller", caller(skip))
+	}
+	ev.Msgf(format, v...)
 }
