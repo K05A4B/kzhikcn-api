@@ -4,7 +4,18 @@
 
 下面仅展示快速部署，如需自定义部署请参考[自定义部署](deploy.md)
 
+> [!NOTE]
+> 从1.0.2版本开始，没有默认的管理员
+> 可以使用CLI工具[添加管理员](./cli.md#admin-add)
+
 ### Docker 部署
+
+> [!NOTE]
+> 使用docker部署时，可以使用以下命令添加管理员
+>
+> ```bash
+> docker exec -it <容器名> /app/kzhikcn admin add -n <用户名>
+> ```
 
 ```bash
 docker run -d --name kzhikcn-api \
@@ -38,6 +49,14 @@ services:
       - ./data:/app/data
       - ./sys:/app/sys
     restart: always
+```
+
+## 命令行工具
+
+除启动服务外，`kzhikcn` 还内置了配置生成、管理员管理、数据库迁移与配置校验等命令，详情请参考 [CLI 工具](cli.md)。
+
+```bash
+kzhikcn --help
 ```
 
 ## 响应结构
