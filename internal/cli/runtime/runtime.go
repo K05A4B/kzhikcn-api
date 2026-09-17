@@ -81,17 +81,25 @@ func PrintResult(ctx *cli.Context, v any, text func(w io.Writer) error) error {
 	return text(w)
 }
 
+// BootstrapOptions 控制 CLI 引导时初始化哪些基础设施。
+type BootstrapOptions struct {
+	// CreateIfMissing 为 true 时，配置文件不存在则写入默认配置。
+	CreateIfMissing bool
+	// WithCache 为 true 时初始化缓存。只访问数据库的 CLI 命令应保持 false，
+	// 避免与运行中的服务争抢缓存目录锁（Badger 为独占锁）。
+	WithCache bool
+}
+
 // Bootstrap 加载配置并初始化基础设施（数据库 / 缓存 / 存储）。
-// createIfMissing 为 true 时，配置文件不存在则写入默认配置。
 // 返回的 cleanup 可安全重复调用。
-func Bootstrap(ctx *cli.Context, createIfMissing bool) (*app.App, func(), error) {
+func Bootstrap(ctx *cli.Context, opts BootstrapOptions) (*app.App, func(), error) {
 	a := app.New()
 	configFile := ctx.String("config")
 
 	consoleOutput := ctx.Context.Value(consoleOutputFlag) != nil
 
 	var err error
-	if createIfMissing {
+	if opts.CreateIfMissing {
 		err = a.BootstrapOrCreate(configFile, consoleOutput)
 	} else {
 		err = a.Bootstrap(configFile, consoleOutput)
@@ -104,7 +112,12 @@ func Bootstrap(ctx *cli.Context, createIfMissing bool) (*app.App, func(), error)
 		return nil, func() {}, err
 	}
 
-	if err := a.Initialize(); err != nil {
+	if opts.WithCache {
+		err = a.Initialize()
+	} else {
+		err = a.InitializeWithoutCache()
+	}
+	if err != nil {
 		_ = cache.CloseCache()
 		_ = data.CloseDB()
 		return nil, func() {}, err
@@ -119,8 +132,9 @@ func Bootstrap(ctx *cli.Context, createIfMissing bool) (*app.App, func(), error)
 }
 
 // WithApp 完成配置加载、基础设施初始化与数据库迁移后执行 action，结束时释放资源。
+// 不初始化缓存，因此可在服务运行时执行。
 func WithApp(ctx *cli.Context, action func(*app.App) error) error {
-	a, cleanup, err := Bootstrap(ctx, false)
+	a, cleanup, err := Bootstrap(ctx, BootstrapOptions{})
 	if err != nil {
 		return err
 	}

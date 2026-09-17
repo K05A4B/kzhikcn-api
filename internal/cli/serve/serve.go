@@ -18,7 +18,10 @@ import (
 // 生命周期：BootstrapOrCreate → Initialize → Migrate → Ready → Serve（goroutine）→ 信号捕获 → Shutdown。
 func Serve() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
-		app, cleanup, err := runtime.Bootstrap(ctx, true)
+		app, cleanup, err := runtime.Bootstrap(ctx, runtime.BootstrapOptions{
+			CreateIfMissing: true,
+			WithCache:       true,
+		})
 		if err != nil {
 			return err
 		}

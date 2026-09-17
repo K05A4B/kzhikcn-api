@@ -158,9 +158,20 @@ func (a *App) BootstrapOrCreate(configFile string, consoleOutput bool) error {
 	return fmt.Errorf("failed to stat config file: %w", err)
 }
 
-// Initialize 初始化基础设施：数据库连接、缓存、存储后端。
+// Initialize 初始化全部基础设施：数据库连接、缓存、存储后端。
 // 前置：StateBootstrapped。
 func (a *App) Initialize() error {
+	return a.initialize(true)
+}
+
+// InitializeWithoutCache 与 Initialize 相同，但跳过缓存初始化。
+// 供只访问数据库的 CLI 命令使用，避免与运行中的服务争抢缓存目录锁。
+// 前置：StateBootstrapped。
+func (a *App) InitializeWithoutCache() error {
+	return a.initialize(false)
+}
+
+func (a *App) initialize(withCache bool) error {
 	if a.State != StateBootstrapped {
 		return fmt.Errorf("cannot initialize from state %d", a.State)
 	}
@@ -178,12 +189,14 @@ func (a *App) Initialize() error {
 	}
 
 	// 2. 缓存
-	if err := cache.InitCache(conf); err != nil {
-		return err
-	}
-	for _, fn := range a.hooks.OnAfterCache {
-		if err := fn(); err != nil {
+	if withCache {
+		if err := cache.InitCache(conf); err != nil {
 			return err
+		}
+		for _, fn := range a.hooks.OnAfterCache {
+			if err := fn(); err != nil {
+				return err
+			}
 		}
 	}
 

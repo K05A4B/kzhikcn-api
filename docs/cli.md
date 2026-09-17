@@ -145,6 +145,9 @@ kzhikcn -c ./config.yml config show --format json
 
 管理员相关命令。所有 `admin` 子命令都会在加载配置后自动执行数据库迁移，再执行具体操作。
 
+> [!NOTE]
+> `admin`、`migrate` 等命令只访问数据库，不会初始化缓存，因此在服务运行期间也可以安全执行，不会与 `serve` 争抢 Badger 缓存目录锁（Badger 为独占锁，缓存目录同时只能被一个进程打开）。
+
 ### admin add
 
 添加管理员。
