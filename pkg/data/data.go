@@ -134,21 +134,12 @@ func AutoMigrates() error {
 	return db.Model(&SchemaState{}).Create(&SchemaState{Version: schemaVersion, LastMigration: time.Now()}).Error
 }
 
-func InitDatabase() (*Admin, error) {
+func InitDatabase() error {
 	err := AutoMigrates()
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	admin := &Admin{
-		Password: []byte("admin"),
-		Username: "admin",
-	}
-
-	err = AddAdmin(admin)
-
-	admin.Password = []byte("admin")
-	return admin, err
+	return nil
 }
 
 func DB() *gorm.DB {

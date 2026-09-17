@@ -224,7 +224,7 @@ func (a *App) Migrate() error {
 		if err := data.DB().AutoMigrate(&data.SchemaState{}); err != nil {
 			return err
 		}
-		if _, err := data.InitDatabase(); err != nil {
+		if err := data.InitDatabase(); err != nil {
 			return err
 		}
 	} else {

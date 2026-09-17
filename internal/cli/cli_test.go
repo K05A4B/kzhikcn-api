@@ -91,13 +91,14 @@ func TestAdminLifecycle(t *testing.T) {
 	assert.Equal(t, "tester", view.Username)
 	assert.False(t, view.EnableMFA)
 
-	// list 至少包含默认管理员与 tester
+	// list 应包含新增的 tester
 	out, err = runCLI(t, configFile, "admin", "list", "--format", "json")
 	require.NoError(t, err)
 
 	var list []map[string]any
 	require.NoError(t, json.Unmarshal([]byte(out), &list))
-	assert.GreaterOrEqual(t, len(list), 2)
+	require.Len(t, list, 1)
+	assert.Equal(t, "tester", list[0]["username"])
 
 	// 生成 MFA 并启用
 	out, err = runCLI(t, configFile, "admin", "mfa", "-n", "tester", "--enable")
