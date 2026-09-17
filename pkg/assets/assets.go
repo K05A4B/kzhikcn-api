@@ -11,13 +11,15 @@ import (
 var DefaultConfig string
 
 func ExportDefaultConfig(file string) error {
-	conf := DefaultConfig
-
-	fp, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0o600)
+	fp, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return errors.Errorf("Failed to create config file. Error: %s", err)
 	}
+	defer fp.Close()
 
-	_, err = fp.WriteString(conf)
-	return err
+	if _, err = fp.WriteString(DefaultConfig); err != nil {
+		return errors.Errorf("Failed to write config file. Error: %s", err)
+	}
+
+	return nil
 }

@@ -2,8 +2,8 @@ package cmdserve
 
 import (
 	"context"
+	"kzhikcn/internal/cli/runtime"
 	"kzhikcn/pkg/log"
-	serverApp "kzhikcn/server/app"
 	"kzhikcn/server/router"
 	"net/http"
 	"os"
@@ -18,15 +18,12 @@ import (
 // 生命周期：BootstrapOrCreate → Initialize → Migrate → Ready → Serve（goroutine）→ 信号捕获 → Shutdown。
 func Serve() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
-		app := serverApp.New()
+		app, cleanup, err := runtime.Bootstrap(ctx, true)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
 
-		configFile := ctx.String("config")
-		if err := app.BootstrapOrCreate(configFile); err != nil {
-			return err
-		}
-		if err := app.Initialize(); err != nil {
-			return err
-		}
 		if err := app.Migrate(); err != nil {
 			return err
 		}

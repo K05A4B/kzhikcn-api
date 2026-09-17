@@ -87,7 +87,25 @@ func (a *App) loadConfig() error {
 }
 
 func (a *App) ReloadConfig() error {
-	return a.loadConfig()
+	if err := a.loadConfig(); err != nil {
+		return err
+	}
+
+	return log.Configure(logOptions(a.Config, true))
+}
+
+// logOptions 将日志配置翻译为 pkg/log 的构建参数。
+func logOptions(conf *config.Config, consoleOutput bool) log.Options {
+	opts := log.Options{
+		Level:   conf.Log.LogLevel,
+		Console: consoleOutput,
+	}
+
+	if conf.Log.Enable && conf.Log.Lumberjack != nil {
+		opts.Writers = append(opts.Writers, conf.Log.Lumberjack)
+	}
+
+	return opts
 }
 
 func (a *App) GetConfig() config.Config {
@@ -99,7 +117,7 @@ func (a *App) GetConfig() config.Config {
 
 // Bootstrap 加载配置文件，完成解析并触发 OnAfterConfig 回调。
 // configFile: YAML 配置文件的路径（必须存在）。
-func (a *App) Bootstrap(configFile string) error {
+func (a *App) Bootstrap(configFile string, consoleOutput bool) error {
 	if a.State != StateNew {
 		return fmt.Errorf("cannot bootstrap from state %d", a.State)
 	}
@@ -107,6 +125,11 @@ func (a *App) Bootstrap(configFile string) error {
 	a.configFile = configFile
 	err := a.loadConfig()
 	if err != nil {
+		return err
+	}
+
+	// 日志必须在其余基础设施（数据库/缓存）开始输出之前完成配置。
+	if err := log.Configure(logOptions(a.Config, consoleOutput)); err != nil {
 		return err
 	}
 
@@ -121,16 +144,16 @@ func (a *App) Bootstrap(configFile string) error {
 }
 
 // BootstrapOrCreate 同 Bootstrap，但如果 configFile 不存在则自动写入默认配置后重试。
-func (a *App) BootstrapOrCreate(configFile string) error {
+func (a *App) BootstrapOrCreate(configFile string, consoleOutput bool) error {
 	_, err := os.Stat(configFile)
 	if err == nil {
-		return a.Bootstrap(configFile)
+		return a.Bootstrap(configFile, consoleOutput)
 	}
 	if os.IsNotExist(err) {
 		if err := assets.ExportDefaultConfig(configFile); err != nil {
 			return fmt.Errorf("failed to create default config: %w", err)
 		}
-		return a.Bootstrap(configFile)
+		return a.Bootstrap(configFile, consoleOutput)
 	}
 	return fmt.Errorf("failed to stat config file: %w", err)
 }

@@ -1,43 +1,32 @@
 package cmdadmin
 
 import (
+	"kzhikcn/internal/cli/runtime"
 	"kzhikcn/server/app"
 
 	"github.com/urfave/cli/v2"
 )
 
-// dbAction 封装了 admin 子命令中通用的"加载配置 + 连接数据库 + 迁移"逻辑。
-func dbAction(skip bool, action cli.ActionFunc) cli.ActionFunc {
+// withApp 在完成数据库迁移后执行 action，结束后自动释放资源。
+func withApp(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
-		if skip {
+		return runtime.WithApp(ctx, func(_ *app.App) error {
 			return action(ctx)
-		}
-
-		app := app.New()
-		configFile := ctx.String("config")
-
-		if err := app.Bootstrap(configFile); err != nil {
-			return err
-		}
-		if err := app.Initialize(); err != nil {
-			return err
-		}
-		if err := app.Migrate(); err != nil {
-			return err
-		}
-
-		return action(ctx)
+		})
 	}
 }
 
 var AdminCommands = &cli.Command{
-	Name:  "admin",
-	Usage: "管理员相关命令",
+	Name:     "admin",
+	Usage:    "管理员相关命令",
+	Category: runtime.CategoryAdmin,
 	Subcommands: []*cli.Command{
 		{
 			Name:    "add",
 			Aliases: []string{"a"},
 			Usage:   "添加管理员",
+			UsageText: "使用 -n 指定管理员名称；-p 省略时将交互式输入密码。\n" +
+				"示例: kzhikcn-cli admin add -n alice -e alice@example.com",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     "name",
@@ -46,10 +35,9 @@ var AdminCommands = &cli.Command{
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     "password",
-					Aliases:  []string{"p"},
-					Usage:    "密码",
-					Required: true,
+					Name:    "password",
+					Aliases: []string{"p"},
+					Usage:   "密码（省略时交互式输入）",
 				},
 				&cli.StringFlag{
 					Name:    "email",
@@ -57,7 +45,7 @@ var AdminCommands = &cli.Command{
 					Usage:   "电子邮件",
 				},
 			},
-			Action: dbAction(false, addAdmin),
+			Action: withApp(addAdmin),
 		},
 		{
 			Name:      "modify",
@@ -66,15 +54,13 @@ var AdminCommands = &cli.Command{
 			UsageText: "使用 -n <用户名> 或 -i <ID> 指定被修改的管理员，如果使用 -i 选项指定管理员后 -n 则表示修改用户名",
 			Flags: []cli.Flag{
 				&cli.UintFlag{
-					Name:       "id",
-					Aliases:    []string{"i"},
-					Usage:      "通过id选定被修改信息的管理员",
-					HasBeenSet: false,
+					Name:    "id",
+					Aliases: []string{"i"},
+					Usage:   "通过id选定被修改信息的管理员",
 				},
 				&cli.BoolFlag{
-					Name:     "mfa",
-					Usage:    "设置管理员MFA状态 (true: 启用 / false: 禁用)",
-					Required: false,
+					Name:  "mfa",
+					Usage: "设置管理员MFA状态 (true: 启用 / false: 禁用)",
 				},
 				&cli.StringFlag{
 					Name:  "totp-secret",
@@ -94,7 +80,7 @@ var AdminCommands = &cli.Command{
 					Usage: "设置头像图片地址",
 				},
 			},
-			Action: dbAction(false, modifyAdmin),
+			Action: withApp(modifyAdmin),
 		},
 		{
 			Name:    "passwd",
@@ -110,10 +96,10 @@ var AdminCommands = &cli.Command{
 				&cli.StringFlag{
 					Name:    "password",
 					Aliases: []string{"p"},
-					Usage:   "新密码",
+					Usage:   "新密码（省略时交互式输入）",
 				},
 			},
-			Action: dbAction(false, changePassword),
+			Action: withApp(changePassword),
 		},
 		{
 			Name:    "find",
@@ -126,8 +112,68 @@ var AdminCommands = &cli.Command{
 					Usage:    "管理员账户名",
 					Required: true,
 				},
+				runtime.FormatFlag(),
 			},
-			Action: dbAction(false, findAdminByName),
+			Action: withApp(findAdminByName),
+		},
+		{
+			Name:    "list",
+			Aliases: []string{"ls"},
+			Usage:   "列出所有管理员",
+			Flags: []cli.Flag{
+				runtime.FormatFlag(),
+			},
+			Action: withApp(listAdmins),
+		},
+		{
+			Name:      "delete",
+			Aliases:   []string{"rm"},
+			Usage:     "删除管理员",
+			UsageText: "使用 -i <ID> 或 -n <用户名> 指定管理员，删除前需确认（非交互环境使用 --yes）",
+			Flags: []cli.Flag{
+				&cli.UintFlag{
+					Name:    "id",
+					Aliases: []string{"i"},
+					Usage:   "通过 ID 指定管理员",
+				},
+				&cli.StringFlag{
+					Name:    "name",
+					Aliases: []string{"n"},
+					Usage:   "通过用户名指定管理员",
+				},
+				&cli.BoolFlag{
+					Name:    "yes",
+					Aliases: []string{"y"},
+					Usage:   "跳过删除确认",
+				},
+			},
+			Action: withApp(deleteAdmin),
+		},
+		{
+			Name:      "mfa",
+			Usage:     "生成或重置管理员的 TOTP 密钥",
+			UsageText: "使用 -i <ID> 或 -n <用户名> 指定管理员；已有密钥时需 --force 才会覆盖",
+			Flags: []cli.Flag{
+				&cli.UintFlag{
+					Name:    "id",
+					Aliases: []string{"i"},
+					Usage:   "通过 ID 指定管理员",
+				},
+				&cli.StringFlag{
+					Name:    "name",
+					Aliases: []string{"n"},
+					Usage:   "通过用户名指定管理员",
+				},
+				&cli.BoolFlag{
+					Name:  "enable",
+					Usage: "生成后直接启用 MFA",
+				},
+				&cli.BoolFlag{
+					Name:  "force",
+					Usage: "覆盖已存在的 TOTP 密钥",
+				},
+			},
+			Action: withApp(generateMFA),
 		},
 	},
 }
