@@ -58,14 +58,13 @@ machine_readable_resources:
     enable: true                    # 是否启用 Sitemap
     extends:                        # 扩展 Sitemap 条目
       - { loc: / }
-      # - { loc: /, last_modify: "{time}", change_freq: weekly, priority: 0.5 }
+      # - { loc: /, last_mod: "{time}", change_freq: weekly }
       # - { loc: /tags, change_freq: monthly }
       # - { loc: /categories, change_freq: monthly }
 
 # 鉴权配置
 auth:
   jwt:
-    type: hs256                     # JWT 签名算法（仅支持 hs256）
     expiry: 72h                     # Token 有效期（72 小时）
     secret: ${JWT_SECRET}           # JWT 密钥（建议通过环境变量配置）
 
@@ -101,6 +100,17 @@ cors:
     # "http://*.example.com",
     # "http://*.cn",
     # "http://foo.bar.example"
+  ]
+
+  # Access-Control-Allow-Methods
+  # 指定允许的 HTTP 方法，留空时默认为 GET, POST, PUT, DELETE, PATCH, OPTIONS
+  allowed_methods: [
+    # "GET",
+    # "POST",
+    # "PUT",
+    # "DELETE",
+    # "PATCH",
+    # "OPTIONS"
   ]
 
   # Access-Control-Allow-Headers

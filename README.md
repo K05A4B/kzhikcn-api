@@ -21,9 +21,12 @@ kzhikcn-api 是一个基于 Go 语言开发的简单的无头内容管理系统�
 - 标签管理（创建、更新、删除）
 - 按分类/标签查询文章
 
-## API 文档
+## 文档
 
-[API 文档](./docs/introduction.md)
+- [快速入门 / API 文档](./docs/introduction.md)
+- [配置文件参考](./docs/config.md)
+- [CLI 工具](./docs/cli.md)
+- [自定义部署](./docs/deploy.md)
 
 ## 许可协议 / LICENSE
 
