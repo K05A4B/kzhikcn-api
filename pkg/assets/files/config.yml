@@ -25,6 +25,19 @@ cache:
     # password: ""         # Redis 密码（如有）
     # db: 0                # 数据库编号
 
+# 事件配置
+event_timeout: 5s # 事件处理超时时间
+events:
+  # - name: Article Created
+  #   on: article.created
+  #   type: webhook
+  #   entry: http://your-webhook-url.lab/your/webhook
+
+  # - name: Article Updated
+  #   on: article.updated
+  #   type: command
+  #   entry: python /your/python/script.py
+
 
 # 机器可读资源配置
 machine_readable_resources:

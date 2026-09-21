@@ -108,6 +108,17 @@ type CORSConf struct {
 	MaxAge           Duration `yaml:"max_age"`
 }
 
+type Event struct {
+	// 事件名
+	Name string `yaml:"name"`
+	// 事件触发时机
+	On string `yaml:"on"`
+	// 事件执行类型 webhook | command
+	Type string `yaml:"type"`
+	// 事件执行入口
+	Entry string `yaml:"entry"`
+}
+
 type Config rawConfig
 
 type rawConfig struct {
@@ -123,6 +134,9 @@ type rawConfig struct {
 	Log      LogConf   `yaml:"log"`
 	Cache    CacheConf `yaml:"cache"`
 	CORS     CORSConf  `yaml:"cors"`
+
+	EventTimeout Duration `yaml:"event_timeout"`
+	Events       []Event  `yaml:"events"`
 }
 
 func (c *Config) UnmarshalYAML(value *yaml.Node) error {

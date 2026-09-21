@@ -55,6 +55,8 @@ type App struct {
 	hooks appHooks
 	srv   *http.Server
 
+	eventDispatcher *eventDispatcher
+
 	confMutex sync.RWMutex
 
 	configFile string
@@ -89,6 +91,11 @@ func (a *App) loadConfig() error {
 func (a *App) ReloadConfig() error {
 	if err := a.loadConfig(); err != nil {
 		return err
+	}
+
+	if a.eventDispatcher != nil {
+		a.eventDispatcher.setTimeout(a.Config.EventTimeout.Duration())
+		a.eventDispatcher.MakeEventsMap(a.Config.Events)
 	}
 
 	return log.Configure(logOptions(a.Config, true))
@@ -132,6 +139,10 @@ func (a *App) Bootstrap(configFile string, consoleOutput bool) error {
 	if err := log.Configure(logOptions(a.Config, consoleOutput)); err != nil {
 		return err
 	}
+
+	// 事件分发器依赖已加载的配置，且必须在 OnAfterConfig 之前构建。
+	a.eventDispatcher = newEventDispatcher(a.Config.Events, a.Config.EventTimeout.Duration())
+	a.eventDispatcher.InjectAppHook(&a.hooks)
 
 	for _, fn := range a.hooks.OnAfterConfig {
 		if err := fn(a.Config); err != nil {
@@ -214,10 +225,18 @@ func (a *App) initialize(withCache bool) error {
 		app:     a,
 	}
 
+	articleHooks := &service.ArticleHooks{}
+	authHooks := &service.AuthHooks{}
+
+	// 注入article.*事件钩子
+	a.eventDispatcher.InjectArticleHook(articleHooks)
+	// 注入auth.*事件钩子
+	a.eventDispatcher.InjectAuthHook(authHooks)
+
 	serviceCtx := service.NewServiceContext(a.Config, articlesRepo, data.DB())
 
-	a.Context.ArticleSvc = service.NewArticleService(serviceCtx, nil)
-	a.Context.AuthSvc = service.NewAuthService(serviceCtx, nil)
+	a.Context.ArticleSvc = service.NewArticleService(serviceCtx, articleHooks)
+	a.Context.AuthSvc = service.NewAuthService(serviceCtx, authHooks)
 	a.Context.AdminSvc = service.NewAdminService(serviceCtx)
 	a.Context.TopicSvc = service.NewTopicService(serviceCtx)
 

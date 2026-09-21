@@ -16,6 +16,7 @@ func TestConfigLoad(t *testing.T) {
 
 	t.Setenv("WEBSITE_URL", "https://www.kzhik.cn")
 	t.Setenv("HTTP_RATE_BLACK_LIST1", "123.231.128.0/23")
+	t.Setenv("WEBHOOK_URL", "http://localhost:9000/hook")
 
 	c, err := config.LoadConfigFromFile(filepath.Join(dir, "test_config.yml"))
 	if err != nil {
@@ -45,5 +46,25 @@ func TestConfigLoad(t *testing.T) {
 	// 预期 http_rate.limit_per_ip 被解析为 RateLimit 且值正确
 	if c.HttpRate.LimitPerIP.Max != 100 || c.HttpRate.LimitPerIP.Window != time.Second {
 		t.Fatalf("test4 failed, limit_per_ip: %v/%v", c.HttpRate.LimitPerIP.Max, c.HttpRate.LimitPerIP.Window)
+	}
+
+	// 测试事件配置解析
+	// 预期 event_timeout 被解析为 Duration
+	if c.EventTimeout.Duration() != 3*time.Second {
+		t.Fatalf("test5 failed, event_timeout: %v", c.EventTimeout.Duration())
+	}
+
+	// 预期 events 列表被完整解析，且 entry 中的环境变量被替换
+	if len(c.Events) != 2 {
+		t.Fatalf("test6 failed, events length: %d", len(c.Events))
+	}
+	if c.Events[0].Name != "T1" || c.Events[0].On != "article.created" || c.Events[0].Type != "webhook" {
+		t.Fatalf("test7 failed, events[0]: %+v", c.Events[0])
+	}
+	if c.Events[0].Entry != "http://localhost:9000/hook" {
+		t.Fatalf("test8 failed, events[0].entry: %s", c.Events[0].Entry)
+	}
+	if c.Events[1].Name != "T2" || c.Events[1].On != "auth.login_success" || c.Events[1].Type != "command" {
+		t.Fatalf("test9 failed, events[1]: %+v", c.Events[1])
 	}
 }
