@@ -449,3 +449,63 @@ func TestUpdate_PublishedAtOnlyOnce(t *testing.T) {
 
 	assert.True(t, firstPublished.Equal(*updated.PublishedAt))
 }
+
+func TestUpdate_TriggersPublishHooks(t *testing.T) {
+	cleanDB(t)
+	svc := newTestService()
+	ctx := context.Background()
+
+	article, err := svc.Create(ctx, &ArticleUpdateFields{
+		Title:  ptr("Publish Hooks"),
+		Status: ptr(data.ARTICLE_STATUS_DRAFT),
+	})
+	require.NoError(t, err)
+
+	var beforeCalled, afterCalled bool
+	svc.hooks.BeforePublish = []func(ctx context.Context, article *data.Article) error{
+		func(ctx context.Context, a *data.Article) error {
+			beforeCalled = true
+			return nil
+		},
+	}
+	svc.hooks.AfterPublish = []func(ctx context.Context, article *data.Article) error{
+		func(ctx context.Context, a *data.Article) error {
+			afterCalled = true
+			return nil
+		},
+	}
+
+	_, err = svc.Update(ctx, article.ID.String(), ArticleUpdateFields{
+		Status: ptr(data.ARTICLE_STATUS_PUBLISHED),
+	})
+	require.NoError(t, err)
+	assert.True(t, beforeCalled, "article.publishing 应在发布前触发")
+	assert.True(t, afterCalled, "article.published 应在发布后触发")
+}
+
+func TestUpdate_DraftDoesNotTriggerPublishHooks(t *testing.T) {
+	cleanDB(t)
+	svc := newTestService()
+	ctx := context.Background()
+
+	article, err := svc.Create(ctx, &ArticleUpdateFields{Title: ptr("Draft Only")})
+	require.NoError(t, err)
+
+	called := false
+	svc.hooks.BeforePublish = []func(ctx context.Context, article *data.Article) error{
+		func(ctx context.Context, a *data.Article) error {
+			called = true
+			return nil
+		},
+	}
+	svc.hooks.AfterPublish = []func(ctx context.Context, article *data.Article) error{
+		func(ctx context.Context, a *data.Article) error {
+			called = true
+			return nil
+		},
+	}
+
+	_, err = svc.Update(ctx, article.ID.String(), ArticleUpdateFields{Title: ptr("Still Draft")})
+	require.NoError(t, err)
+	assert.False(t, called, "非发布更新不应触发发布事件")
+}

@@ -35,6 +35,7 @@ func VerifyTOTP(appCtx *app.AppContext) hdl.Handler[VerifyTOTPRequest] {
 
 			err = appCtx.AuthSvc.TOTPValidate(r.Context(), string(admin.TotpSecret), challenge, payload.OTP)
 			if errors.Is(err, service.ErrAuthenticationFailed) {
+				appCtx.AuthSvc.NotifyLoginFailed(r.Context(), admin.Username, "invalid totp code")
 				return ErrAuthenticationFailed
 			}
 			if err != nil {
@@ -45,8 +46,11 @@ func VerifyTOTP(appCtx *app.AppContext) hdl.Handler[VerifyTOTPRequest] {
 
 			token, err := authtoken.IssueToken(admin.ID, admin.Username, true)
 			if err != nil {
+				appCtx.AuthSvc.NotifyLoginFailed(r.Context(), admin.Username, "generate token failed")
 				return ErrGenerateTokenFailed.Wrap(err)
 			}
+
+			appCtx.AuthSvc.NotifyLoginSuccess(r.Context(), admin)
 
 			resp.Data = VerifyTOTPResponse{Token: token}
 			return nil

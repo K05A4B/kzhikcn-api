@@ -130,6 +130,17 @@ func (a *AuthService) Logout(ctx context.Context, claims *authtoken.TokenClaims)
 	return authtoken.RevokeToken(ctx, claims)
 }
 
+// NotifyLoginSuccess 触发登录成功钩子。
+// 供上层在完成最终认证（如 MFA 校验通过并签发 token）后调用。
+func (a *AuthService) NotifyLoginSuccess(ctx context.Context, admin *data.Admin) {
+	a.hooks.triggerSuccess(ctx, admin)
+}
+
+// NotifyLoginFailed 触发登录失败钩子。
+func (a *AuthService) NotifyLoginFailed(ctx context.Context, username, reason string) {
+	a.hooks.triggerFailed(ctx, username, reason)
+}
+
 func (a *AuthService) TOTPValidate(ctx context.Context, secret string, challenge *MFAChallenge, code string) error {
 	if challenge == nil {
 		return errors.New("challenge cannot be nil")

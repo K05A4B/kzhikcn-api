@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type LoginResponse struct {
@@ -60,7 +59,8 @@ func loginHandler(r *http.Request, resp *hdl.Response, payload LoginRequest, app
 	password := payload.Password
 
 	admin, err := adminSvc.GetAdminByName(r.Context(), username)
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, service.ErrAdminNotFound) {
+		authSvc.NotifyLoginFailed(r.Context(), username, "admin not found")
 		return ErrAuthenticationFailed
 	}
 

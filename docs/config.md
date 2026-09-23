@@ -126,9 +126,15 @@ storage:
 | `article.published` | 文章发布后 | 文章对象 |
 | `article.deleting` | 删除文章前 | `{ "articleID": "...", "isHard": true }` |
 | `article.deleted` | 删除文章后 | `{ "articleID": "...", "isHard": true }` |
-| `auth.login_success` | 登录成功 | 管理员对象（不含密码与 TOTP 密钥） |
-| `auth.login_failed` | 登录失败 | `{ "username": "...", "reason": "..." }` |
+| `auth.login_success` | 登录成功（含 MFA 校验通过并签发 token） | 管理员对象（不含密码与 TOTP 密钥） |
+| `auth.login_failed` | 登录失败（用户名不存在、密码错误、MFA 验证码错误等） | `{ "username": "...", "reason": "..." }` |
 | `auth.logout` | 登出 | JWT claims（含 `adminId`、`is_admin`） |
+
+> [!NOTE]
+> `article.publishing` / `article.published` 仅在通过「更新文章信息」把状态变更为 `published` 时触发。若在「创建文章」时直接把 `status` 设为 `published`，只会触发 `article.created`，**不会**触发发布相关事件。
+
+> [!NOTE]
+> `auth.login_success` 在登录**完整成功**后触发：未启用 MFA 时在签发 token 后触发，启用 MFA 时在 TOTP 校验通过并签发 token 后触发。`auth.login_failed` 在用户名不存在、密码错误、MFA 验证码错误、签发 token 失败等场景触发。
 
 ### webhook
 

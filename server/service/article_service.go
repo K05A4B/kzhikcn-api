@@ -63,6 +63,11 @@ type ArticleUpdateFields struct {
 	EnableComment *bool               `json:"enableComment"`
 }
 
+// isPublishing 判断更新字段是否将文章置为发布状态。
+func isPublishing(status *data.ArticleStatus) bool {
+	return status != nil && *status == data.ARTICLE_STATUS_PUBLISHED
+}
+
 func getArticleByID(id string, mods ...data.QueryModifier) (*data.Article, error) {
 	article, err := data.GetArticleByAnyID(id, append([]data.QueryModifier{data.LimitQueryModifier(1)}, mods...)...)
 	if article == nil || err == gorm.ErrRecordNotFound {
@@ -86,6 +91,14 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 		}
 	}
 
+	if isPublishing(ea.Status) {
+		for _, hook := range svc.hooks.BeforePublish {
+			if err := hook(ctx, article); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	err = svc.ctx.DB.Transaction(func(tx *gorm.DB) error {
 		selectedFields := []string{}
 
@@ -93,26 +106,32 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 			article.Title = *ea.Title
 			selectedFields = append(selectedFields, "title")
 		}
+
 		if ea.CustomID != nil {
 			article.CustomID = *ea.CustomID
 			selectedFields = append(selectedFields, "custom_id")
 		}
+
 		if ea.Description != nil {
 			article.Description = *ea.Description
 			selectedFields = append(selectedFields, "description")
 		}
+
 		if ea.EnableComment != nil {
 			article.EnableComment = *ea.EnableComment
 			selectedFields = append(selectedFields, "enable_comment")
 		}
+
 		if ea.CoverImage != nil {
 			article.CoverImage = *ea.CoverImage
 			selectedFields = append(selectedFields, "cover_image")
 		}
+
 		if ea.Status != nil {
 			newStatus := *ea.Status
 			article.Status = newStatus
 			selectedFields = append(selectedFields, "status")
+
 			if newStatus == data.ARTICLE_STATUS_PUBLISHED && article.PublishedAt == nil {
 				now := time.Now()
 				article.PublishedAt = &now
@@ -127,6 +146,7 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 
 		if ea.Tags != nil {
 			tags := []data.Tag{}
+
 			for _, tagName := range ea.Tags {
 				var tag data.Tag
 				if err := tx.Where("tag_name=?", tagName).FirstOrCreate(&tag, data.Tag{TagName: tagName}).Error; err != nil {
@@ -134,6 +154,7 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 				}
 				tags = append(tags, tag)
 			}
+
 			err = tx.Model(article).Association("Tags").Replace(tags)
 			if err != nil {
 				return err
@@ -143,23 +164,28 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 		if ea.Category != nil {
 			categoryString := *ea.Category
 			category := data.Category{}
+
 			if categoryString != "" && categoryString[0] == '#' {
 				id, err := strconv.ParseUint(categoryString[1:], 10, 64)
 				if err == nil {
 					category.ID = uint(id)
 				}
 			}
+
 			if category.ID != 0 {
 				err = tx.Where("id=?", category.ID).Limit(1).First(&category).Error
 			} else {
 				err = tx.Where("category_name=?", categoryString).Limit(1).First(&category).Error
 			}
+
 			if err == gorm.ErrRecordNotFound {
 				return ErrCategoryNotFound
 			}
+
 			if err != nil {
 				return err
 			}
+
 			err = tx.Model(article).Association("Category").Replace(&category)
 			if err != nil {
 				return err
@@ -173,7 +199,7 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 		return nil, err
 	}
 
-	if ea.Status != nil && *ea.Status == data.ARTICLE_STATUS_PUBLISHED {
+	if isPublishing(ea.Status) {
 		for _, hook := range svc.hooks.AfterPublish {
 			if err := hook(ctx, article); err != nil {
 				return nil, err
@@ -230,6 +256,7 @@ func (svc *ArticleService) IncrementLikes(ctx context.Context, id string) (int, 
 	if err != nil {
 		return 0, err
 	}
+
 	err = svc.ctx.DB.Model(article).Select("likes", "id").Find(article).Error
 	if err != nil {
 		return 0, err
@@ -254,6 +281,7 @@ func (svc *ArticleService) Create(ctx context.Context, ea *ArticleUpdateFields) 
 			if err == gorm.ErrRecordNotFound {
 				return ErrCategoryNotFound
 			}
+
 			if err != nil {
 				return err
 			}
@@ -262,9 +290,11 @@ func (svc *ArticleService) Create(ctx context.Context, ea *ArticleUpdateFields) 
 		var tags []data.Tag
 		for _, tagName := range ea.Tags {
 			tag := data.Tag{}
+
 			if err := tx.Where("tag_name = ?", tagName).FirstOrCreate(&tag, data.Tag{TagName: tagName}).Error; err != nil {
 				return err
 			}
+
 			tags = append(tags, tag)
 		}
 
@@ -326,9 +356,11 @@ func (svc *ArticleService) Delete(ctx context.Context, id string, isHard bool) e
 		if tx == nil {
 			return nil
 		}
+
 		if isHard {
 			tx = tx.Unscoped()
 		}
+
 		if err := tx.Delete(article).Error; err != nil {
 			return err
 		}

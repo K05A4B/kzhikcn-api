@@ -6,6 +6,9 @@
 
 ![登录流程图](../imgs/auth.png)
 
+> [!note]
+> 登录结果会触发事件：登录**完整成功**（未启用 MFA 时签发 token 后，或 MFA 校验通过并签发 token 后）触发 `auth.login_success`；用户名不存在、密码错误、MFA 验证码错误等触发 `auth.login_failed`。详见[事件配置](../config.md#触发时机)。
+
 ---
 
 ## 登录接口

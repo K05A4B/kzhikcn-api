@@ -453,6 +453,8 @@ Content-Type: application/json
 
 > [!note]
 > 当 `status` 设为 `published` 时，`publishedAt` 会自动填充为当前时间。
+>
+> 注意：创建时直接设为 `published` **不会**触发 `article.publishing` / `article.published` 事件，只会触发 `article.created`。发布事件仅在通过「更新文章信息」把状态变更为 `published` 时触发，详见[事件配置](../config.md#触发时机)。
 
 **接口错误代码**：
 
@@ -492,6 +494,9 @@ PATCH /api/v1/articles/{article_id}
 | tags           | 数组   | 否   | 标签名称列表，`[]` 清空，`null` 不修改 |
 | enableComment  | 布尔值 | 否   | 是否启用评论                          |
 | status         | 字符串 | 否   | 状态：`published` / `draft` / `hidden` |
+
+> [!note]
+> 将 `status` 变更为 `published` **会触发发布事件**：事务前触发 `article.publishing`，事务后触发 `article.published`。这是触发发布事件的唯一方式（创建时直接设为 `published` 不会触发）。
 
 **请求示例**：
 
