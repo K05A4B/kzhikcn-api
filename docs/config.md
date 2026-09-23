@@ -34,7 +34,7 @@
 | `key_file` | 字符串 | 空 | TLS 私钥路径 |
 | `storage` | 对象 | - | 存储配置 |
 | `cache` | 对象 | - | 缓存配置 |
-| `event_timeout` | 时长 | `10s` | 事件分发超时 |
+| `event_dispatcher` | 对象 | - | 事件分发器配置 |
 | `events` | 列表 | 空 | 事件订阅列表 |
 | `machine_readable_resources` | 对象 | - | 机器可读资源（RSS / Sitemap）配置 |
 | `auth` | 对象 | - | 鉴权配置 |
@@ -77,15 +77,20 @@ storage:
 
 ## 事件配置
 
-事件系统允许在特定生命周期节点触发外部动作。每个事件可通过 `webhook` 发起 HTTP 请求，或通过 `command` 执行本地命令。
+事件系统允许在特定生命周期节点触发外部动作。每个事件可通过 `webhook` 发起 HTTP 请求，或通过 `command` 执行本地命令。默认为**异步执行**。
 
-### event_timeout
+### event_dispatcher
 
-单次事件分发的超时时间，同时作用于 webhook 的 HTTP 请求与 command 的执行时长。
+事件分发器的超时与异步执行池配置。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | :--- | :--- | :--- | :--- |
-| `event_timeout` | 时长 | `10s` | 事件分发超时；未配置或非正值时使用 `10s` |
+| `timeout` | 时长 | `10s` | 单次事件分发超时，同时作用于 webhook 的 HTTP 请求与 command 的执行时长；未配置或非正值时使用 `10s` |
+| `workers` | 整数 | `4` | 异步执行池的 worker 数量；非正值时使用默认值。**仅启动时生效** |
+| `queue_size` | 整数 | `256` | 异步执行池的队列长度；非正值时使用默认值。**仅启动时生效** |
+
+> [!NOTE]
+> `workers` 与 `queue_size` 仅在服务启动时读取。热重载配置时若发生变化，会记录警告提示需重启服务。
 
 ### events
 
@@ -97,6 +102,9 @@ storage:
 | `on` | 字符串 | 是 | 触发时机，取值见[触发时机](#触发时机) |
 | `type` | 字符串 | 是 | 执行类型：`webhook` 或 `command` |
 | `entry` | 字符串 | 是 | 执行入口：webhook 为 URL，command 为命令行 |
+| `async` | 布尔 | 否 | 是否异步执行，默认 `true`；设为 `false` 强制同步。`app.*` 事件始终同步，此项对其无效 |
+| `timeout` | 时长 | 否 | 覆盖 `event_dispatcher.timeout`，对 webhook 与 command 均生效 |
+| `headers` | 对象 | 否 | webhook 请求附带的 HTTP 头，仅对 `type: webhook` 生效；值支持 `${环境变量}` 引用 |
 
 ### 触发时机
 
@@ -126,7 +134,8 @@ storage:
 
 向 `entry` 指定的 URL 发起 `POST` 请求：
 
-- 请求头 `Content-Type: application/json`。
+- 默认请求头为 `Content-Type: application/json` 与 `User-Agent: kzhikcn-api/<version>`，均可通过 `headers` 覆盖。
+- `headers` 中的键值会写入请求头；其中 `Host` 会生效。
 - 请求体为统一的事件信封：
 
   ```json
@@ -138,7 +147,7 @@ storage:
   ```
 
 - 响应状态码为 `2xx` 视为成功，其它状态码视为失败。
-- HTTP 请求受 `event_timeout` 约束。
+- HTTP 请求受 `event_dispatcher.timeout` 约束，事件级 `timeout` 可覆盖。
 
 ### command
 
@@ -148,30 +157,45 @@ storage:
 - 事件信封（与 webhook 相同的 JSON）写入命令的 **标准输入**。
 - 同时注入环境变量 `EVENT_NAME`、`EVENT_ON`。
 - 命令退出码非 `0` 视为失败。
-- 命令执行受 `event_timeout` 约束。
+- 命令执行受 `event_dispatcher.timeout` 约束，事件级 `timeout` 可覆盖。
+- `headers` 对 command 无效（命令无 HTTP 头概念）。
 
 ### 执行语义
 
-- 同一 `on` 可配置多个事件，按配置顺序依次执行。
-- 事件分发为 **best-effort**：任一事件失败仅记录日志，**不会阻断**触发它的业务请求（例如登录、创建文章仍会正常返回成功）。
+- **默认异步**：事件在业务请求返回后由后台执行池处理，不增加接口延迟；`async: false` 可让单个事件同步执行（请求会等待其完成）。
+- **`app.*` 强制同步**：生命周期事件（`app.after_db`、`app.shutdown` 等）时机敏感，始终同步执行，配置 `async: true` 也不会生效。
+- **有界执行池**：异步事件投递到固定大小的队列（默认 4 个 worker、256 队列长度，可通过 `event_dispatcher.workers` / `event_dispatcher.queue_size` 调整）。队列满时事件被丢弃并记录告警，**不会阻塞**请求路径。
+- **载荷快照**：异步事件在派发瞬间对 `data` 做序列化快照，请求后续对对象的修改不会影响已派发的事件。
+- **关闭排空**：服务关闭时会等待在途异步事件完成，等待时间受关闭超时约束；超时未完成的事件可能丢失。
+- **best-effort**：任一事件失败仅记录日志，**不会阻断**触发它的业务请求（例如登录、创建文章仍会正常返回成功）。
+- **顺序**：同步事件在同一 `on` 下按配置顺序依次执行；异步事件的完成顺序不保证。
 - `type` 不在 `webhook` / `command` 中时，会记录日志并跳过该事件。
 
 ### 示例
 
 ```yaml
-event_timeout: 5s
+event_dispatcher:
+  timeout: 5s
+  workers: 4
+  queue_size: 256
+
 events:
-  # webhook：文章创建后回调
+  # webhook：文章创建后回调（默认异步），自定义超时与请求头
   - name: Article Created
     on: article.created
     type: webhook
     entry: http://127.0.0.1:8080/hooks/article-created
+    timeout: 30s
+    headers:
+      Authorization: "Bearer ${HOOK_TOKEN}"
+      User-Agent: my-hook-client/1.0
 
-  # command：登录成功后执行脚本
+  # command：登录成功后执行脚本，改为同步执行
   - name: Login Success
     on: auth.login_success
     type: command
     entry: python /opt/hooks/on_login.py
+    async: false
 ```
 
 `on_login.py` 可从标准输入读取事件信封，或直接读取环境变量 `EVENT_NAME` / `EVENT_ON`。
@@ -181,6 +205,9 @@ events:
 
 > [!NOTE]
 > 事件载荷中的敏感字段（如管理员的密码哈希、TOTP 密钥）不会序列化输出。
+
+> [!IMPORTANT]
+> 旧版顶层配置项 `event_timeout` 已移除，请改用 `event_dispatcher.timeout`。旧配置中的 `event_timeout` 会被静默忽略并退回默认超时。
 
 ## machine_readable_resources
 
@@ -344,18 +371,30 @@ cache:
     # password: ""         # Redis 密码（如有）
     # db: 0                # 数据库编号
 
-# 事件配置
-event_timeout: 5s # 事件处理超时时间
+# 事件分发配置
+event_dispatcher:
+  timeout: 5s      # 单次事件分发超时时间
+  workers: 4       # 异步事件 worker 数量（仅启动时生效）
+  queue_size: 256  # 异步事件队列长度（仅启动时生效）
+
+# 事件订阅列表
 events:
+  # 事件默认异步执行；async: false 可改为同步（app.* 事件始终同步）
+  # timeout 覆盖 event_dispatcher.timeout；headers 仅对 webhook 生效
   # - name: Article Created
   #   on: article.created
   #   type: webhook
   #   entry: http://your-webhook-url.lab/your/webhook
+  #   async: true
+  #   timeout: 30s
+  #   headers:
+  #     Authorization: "Bearer ${WEBHOOK_TOKEN}"
 
   # - name: Article Updated
   #   on: article.updated
   #   type: command
   #   entry: python /your/python/script.py
+  #   async: false
 
 
 # 机器可读资源配置
