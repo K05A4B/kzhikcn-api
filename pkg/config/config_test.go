@@ -17,6 +17,7 @@ func TestConfigLoad(t *testing.T) {
 	t.Setenv("WEBSITE_URL", "https://www.kzhik.cn")
 	t.Setenv("HTTP_RATE_BLACK_LIST1", "123.231.128.0/23")
 	t.Setenv("WEBHOOK_URL", "http://localhost:9000/hook")
+	t.Setenv("WEBHOOK_TOKEN", "secret-token")
 
 	c, err := config.LoadConfigFromFile(filepath.Join(dir, "test_config.yml"))
 	if err != nil {
@@ -49,9 +50,12 @@ func TestConfigLoad(t *testing.T) {
 	}
 
 	// 测试事件配置解析
-	// 预期 event_timeout 被解析为 Duration
-	if c.EventTimeout.Duration() != 3*time.Second {
-		t.Fatalf("test5 failed, event_timeout: %v", c.EventTimeout.Duration())
+	// 预期 event_dispatcher 被解析为对应字段
+	if c.EventDispatcher.Timeout.Duration() != 3*time.Second {
+		t.Fatalf("test5 failed, event_dispatcher.timeout: %v", c.EventDispatcher.Timeout.Duration())
+	}
+	if c.EventDispatcher.Workers != 2 || c.EventDispatcher.QueueSize != 8 {
+		t.Fatalf("test5b failed, event_dispatcher: %+v", c.EventDispatcher)
 	}
 
 	// 预期 events 列表被完整解析，且 entry 中的环境变量被替换
@@ -66,5 +70,27 @@ func TestConfigLoad(t *testing.T) {
 	}
 	if c.Events[1].Name != "T2" || c.Events[1].On != "auth.login_success" || c.Events[1].Type != "command" {
 		t.Fatalf("test9 failed, events[1]: %+v", c.Events[1])
+	}
+
+	// 预期 events[].async 被解析：显式 true，缺省为 nil（默认异步）
+	if c.Events[0].Async == nil || !*c.Events[0].Async {
+		t.Fatalf("test10 failed, events[0].async: %v", c.Events[0].Async)
+	}
+	if c.Events[1].Async != nil {
+		t.Fatalf("test11 failed, events[1].async: %v", c.Events[1].Async)
+	}
+
+	// 预期事件级 timeout 与 headers 被解析，且 header 值中的环境变量被替换
+	if c.Events[0].Timeout.Duration() != 7*time.Second {
+		t.Fatalf("test12 failed, events[0].timeout: %v", c.Events[0].Timeout.Duration())
+	}
+	if c.Events[0].Headers["Authorization"] != "Bearer secret-token" {
+		t.Fatalf("test13 failed, events[0].headers.Authorization: %q", c.Events[0].Headers["Authorization"])
+	}
+	if c.Events[0].Headers["X-Source"] != "kzhikcn" {
+		t.Fatalf("test14 failed, events[0].headers.X-Source: %q", c.Events[0].Headers["X-Source"])
+	}
+	if len(c.Events[1].Headers) != 0 {
+		t.Fatalf("test15 failed, events[1].headers: %+v", c.Events[1].Headers)
 	}
 }

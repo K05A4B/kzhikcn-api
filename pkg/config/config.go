@@ -117,6 +117,24 @@ type Event struct {
 	Type string `yaml:"type"`
 	// 事件执行入口
 	Entry string `yaml:"entry"`
+	// 是否异步执行。nil 表示默认异步，false 表示强制同步。
+	// app.* 生命周期事件始终同步，此配置对其无效。
+	Async *bool `yaml:"async"`
+	// 单次分发超时，覆盖 event_dispatcher.timeout。未配置或非正值时使用分发器默认超时。
+	Timeout Duration `yaml:"timeout"`
+	// webhook 请求附带的 HTTP 头，可覆盖默认的 Content-Type 与 User-Agent。
+	// 仅对 type=webhook 生效。值支持 ${环境变量} 引用。
+	Headers map[string]string `yaml:"headers"`
+}
+
+// EventDispatcherConf 配置事件分发器的超时与异步执行池。
+type EventDispatcherConf struct {
+	// 单次事件分发的超时时间
+	Timeout Duration `yaml:"timeout"`
+	// 异步执行池的 worker 数量（仅启动时生效）
+	Workers int `yaml:"workers"`
+	// 异步执行池的队列长度（仅启动时生效）
+	QueueSize int `yaml:"queue_size"`
 }
 
 type Config rawConfig
@@ -135,8 +153,8 @@ type rawConfig struct {
 	Cache    CacheConf `yaml:"cache"`
 	CORS     CORSConf  `yaml:"cors"`
 
-	EventTimeout Duration `yaml:"event_timeout"`
-	Events       []Event  `yaml:"events"`
+	EventDispatcher EventDispatcherConf `yaml:"event_dispatcher"`
+	Events          []Event             `yaml:"events"`
 }
 
 func (c *Config) UnmarshalYAML(value *yaml.Node) error {

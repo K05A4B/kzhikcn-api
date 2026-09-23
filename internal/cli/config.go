@@ -154,5 +154,29 @@ func validateConfig(conf *pkgconfig.Config) []string {
 		}
 	}
 
+	if conf.EventDispatcher.Timeout < 0 {
+		problems = append(problems, "event_dispatcher.timeout 不能为负")
+	}
+	if conf.EventDispatcher.Workers < 0 {
+		problems = append(problems, "event_dispatcher.workers 不能为负")
+	}
+	if conf.EventDispatcher.QueueSize < 0 {
+		problems = append(problems, "event_dispatcher.queue_size 不能为负")
+	}
+
+	for i, event := range conf.Events {
+		prefix := fmt.Sprintf("events[%d]", i)
+
+		if event.Timeout < 0 {
+			problems = append(problems, prefix+".timeout 不能为负")
+		}
+
+		for name := range event.Headers {
+			if strings.TrimSpace(name) == "" {
+				problems = append(problems, prefix+".headers 存在空 header 名")
+			}
+		}
+	}
+
 	return problems
 }

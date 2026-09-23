@@ -10,9 +10,11 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
+	"kzhikcn/internal/appinfo"
 	"kzhikcn/pkg/config"
 	"kzhikcn/pkg/data"
 	"kzhikcn/pkg/log"
@@ -22,8 +24,20 @@ import (
 
 type Event = config.Event
 
-// defaultEventDispatchTimeout 是未配置 event_timeout（或配置值非正）时的兜底超时。
 const defaultEventDispatchTimeout = 10 * time.Second
+
+const (
+	defaultEventWorkerCount = 4
+	defaultEventQueueSize   = 256
+)
+
+var defaultWebhookUserAgent = appinfo.Name + "/" + appinfo.Version
+
+// eventJob 是投递到异步执行池的事件任务，data 已在此前序列化为快照。
+type eventJob struct {
+	event Event
+	data  json.RawMessage
+}
 
 // eventPayload 是分发给 webhook / command 的事件载荷信封。
 type eventPayload struct {
@@ -53,6 +67,29 @@ type eventDispatcher struct {
 	mu      sync.RWMutex
 	events  map[string][]Event
 	timeout time.Duration
+
+	// jobs 为有界异步执行队列；wg 跟踪在途异步任务，供关闭时排空。
+	// closeMu 保护 closed 标志与向 jobs 发送的过程，避免向已关闭通道发送。
+	jobs    chan eventJob
+	wg      sync.WaitGroup
+	closeMu sync.Mutex
+	closed  bool
+
+	// workers / queueSize 记录启动时的执行池规模，供配置重载时比对提示。
+	workers   int
+	queueSize int
+}
+
+// shouldRunAsync 判断事件是否异步执行。
+// 生命周期事件（app.*）强制同步；其余事件默认异步，可通过 async: false 强制同步。
+func (e *eventDispatcher) shouldRunAsync(event Event) bool {
+	if strings.HasPrefix(event.On, "app.") {
+		return false
+	}
+	if event.Async == nil {
+		return true
+	}
+	return *event.Async
 }
 
 func (e *eventDispatcher) dispatch(eventOn string, data any) {
@@ -64,30 +101,109 @@ func (e *eventDispatcher) dispatch(eventOn string, data any) {
 		return
 	}
 
-	logTpl := log.With("type", "trigger_event").With("on", eventOn)
-
 	for _, event := range events {
-		var err error = nil
-
-		switch event.Type {
-		case "webhook":
-			err = e.dispatchWebhook(event, data)
-		case "command":
-			err = e.dispatchCommand(event, data)
-		default:
-			logTpl.Errorf("unknown event type: %s", event.Type)
+		if !e.shouldRunAsync(event) {
+			e.dispatchOne(event, data)
 			continue
 		}
 
-		l := logTpl.With("type", event.Type).
-			With("event_name", event.Name)
-
+		// 异步执行前先冻结载荷：请求返回后原始对象可能被继续修改，
+		// 直接传指针会导致异步任务读到脏数据甚至数据竞争。
+		raw, err := json.Marshal(data)
 		if err != nil {
-			l.Errorf("failed to dispatch event: %v", err)
+			log.With("type", "trigger_event").With("on", eventOn).
+				With("event_name", event.Name).
+				Errorf("marshal event payload for async dispatch: %v", err)
 			continue
 		}
 
-		l.Info("event dispatched successfully")
+		e.enqueue(eventJob{event: event, data: raw})
+	}
+}
+
+// dispatchOne 执行单个事件（webhook / command）并记录结果。
+func (e *eventDispatcher) dispatchOne(event Event, data any) {
+	logTpl := log.With("type", "trigger_event").With("on", event.On)
+
+	var err error = nil
+
+	switch event.Type {
+	case "webhook":
+		err = e.dispatchWebhook(event, data)
+	case "command":
+		err = e.dispatchCommand(event, data)
+	default:
+		logTpl.Errorf("unknown event type: %s", event.Type)
+		return
+	}
+
+	l := logTpl.With("type", event.Type).
+		With("event_name", event.Name)
+
+	if err != nil {
+		l.Errorf("failed to dispatch event: %v", err)
+		return
+	}
+
+	l.Info("event dispatched successfully")
+}
+
+// enqueue 将任务投递到异步执行池；队列满或分发器已关闭时丢弃并告警。
+// 发送为非阻塞，且全程持锁，保证不会向已关闭的通道发送。
+func (e *eventDispatcher) enqueue(job eventJob) {
+	e.closeMu.Lock()
+	defer e.closeMu.Unlock()
+
+	l := log.With("type", "trigger_event").With("on", job.event.On).
+		With("event_name", job.event.Name)
+
+	if e.closed {
+		l.Warnf("event dispatcher is closed, dropping event")
+		return
+	}
+
+	e.wg.Add(1)
+
+	select {
+	case e.jobs <- job:
+	default:
+		e.wg.Done()
+		l.Warnf("event queue is full, dropping event")
+	}
+}
+
+// Close 关闭异步队列并等待在途事件完成，ctx 控制等待上限。
+// 可重复调用。
+func (e *eventDispatcher) Close(ctx context.Context) error {
+	e.closeMu.Lock()
+	if !e.closed {
+		e.closed = true
+		close(e.jobs)
+	}
+	e.closeMu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		e.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (e *eventDispatcher) startWorkers(workers int) {
+	for i := 0; i < workers; i++ {
+		go func() {
+			for job := range e.jobs {
+				e.dispatchOne(job.event, job.data)
+				e.wg.Done()
+			}
+		}()
 	}
 }
 
@@ -110,8 +226,18 @@ func (e *eventDispatcher) dispatchWebhook(event Event, data any) error {
 		return fmt.Errorf("build webhook request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", defaultWebhookUserAgent)
 
-	client := &http.Client{Timeout: e.timeoutOr()}
+	for name, value := range event.Headers {
+		req.Header.Set(name, value)
+
+		// Host 无法通过 Header 生效，需同时设置 req.Host
+		if strings.EqualFold(name, "Host") {
+			req.Host = value
+		}
+	}
+
+	client := &http.Client{Timeout: e.effectiveTimeout(event)}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("send webhook request: %w", err)
@@ -140,7 +266,7 @@ func (e *eventDispatcher) dispatchCommand(event Event, data any) error {
 		return fmt.Errorf("marshal command payload: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), e.timeoutOr())
+	ctx, cancel := context.WithTimeout(context.Background(), e.effectiveTimeout(event))
 	defer cancel()
 
 	name, args := shellInvocation(runtime.GOOS, event.Entry)
@@ -293,6 +419,19 @@ func (e *eventDispatcher) setTimeout(timeout time.Duration) {
 	e.mu.Unlock()
 }
 
+// effectiveTimeout 返回事件的生效超时：事件级 timeout 优先，否则使用分发器超时。
+func (e *eventDispatcher) effectiveTimeout(event Event) time.Duration {
+	if event.Timeout > 0 {
+		return event.Timeout.Duration()
+	}
+	return e.timeoutOr()
+}
+
+// poolConfig 返回启动时的执行池规模，供配置重载时比对提示。
+func (e *eventDispatcher) poolConfig() (workers, queueSize int) {
+	return e.workers, e.queueSize
+}
+
 // timeoutOr 返回当前分发超时，未设置时返回默认超时。
 func (e *eventDispatcher) timeoutOr() time.Duration {
 	e.mu.RLock()
@@ -305,9 +444,21 @@ func (e *eventDispatcher) timeoutOr() time.Duration {
 	return timeout
 }
 
-func newEventDispatcher(events []Event, timeout time.Duration) *eventDispatcher {
-	e := &eventDispatcher{}
+func newEventDispatcher(events []Event, timeout time.Duration, workers, queueSize int) *eventDispatcher {
+	if workers <= 0 {
+		workers = defaultEventWorkerCount
+	}
+	if queueSize <= 0 {
+		queueSize = defaultEventQueueSize
+	}
+
+	e := &eventDispatcher{
+		jobs:      make(chan eventJob, queueSize),
+		workers:   workers,
+		queueSize: queueSize,
+	}
 	e.setTimeout(timeout)
 	e.MakeEventsMap(events)
+	e.startWorkers(workers)
 	return e
 }

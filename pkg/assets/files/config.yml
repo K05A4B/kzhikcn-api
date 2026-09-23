@@ -25,18 +25,30 @@ cache:
     # password: ""         # Redis 密码（如有）
     # db: 0                # 数据库编号
 
-# 事件配置
-event_timeout: 5s # 事件处理超时时间
+# 事件分发配置
+event_dispatcher:
+  timeout: 5s      # 单次事件分发超时时间
+  workers: 4       # 异步事件 worker 数量（仅启动时生效）
+  queue_size: 256  # 异步事件队列长度（仅启动时生效）
+
+# 事件订阅列表
 events:
+  # 事件默认异步执行；async: false 可改为同步（app.* 事件始终同步）
+  # timeout 覆盖 event_dispatcher.timeout；headers 仅对 webhook 生效
   # - name: Article Created
   #   on: article.created
   #   type: webhook
   #   entry: http://your-webhook-url.lab/your/webhook
+  #   async: true
+  #   timeout: 30s
+  #   headers:
+  #     Authorization: "Bearer ${WEBHOOK_TOKEN}"
 
   # - name: Article Updated
   #   on: article.updated
   #   type: command
   #   entry: python /your/python/script.py
+  #   async: false
 
 
 # 机器可读资源配置

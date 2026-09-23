@@ -94,8 +94,17 @@ func (a *App) ReloadConfig() error {
 	}
 
 	if a.eventDispatcher != nil {
-		a.eventDispatcher.setTimeout(a.Config.EventTimeout.Duration())
+		a.eventDispatcher.setTimeout(a.Config.EventDispatcher.Timeout.Duration())
 		a.eventDispatcher.MakeEventsMap(a.Config.Events)
+
+		// 执行池规模仅启动时生效，配置变更需重启服务
+		workers, queueSize := a.eventDispatcher.poolConfig()
+		if cfg := a.Config.EventDispatcher.Workers; cfg > 0 && cfg != workers {
+			log.Warnf("event_dispatcher.workers 变更需重启服务后生效: %d -> %d", workers, cfg)
+		}
+		if cfg := a.Config.EventDispatcher.QueueSize; cfg > 0 && cfg != queueSize {
+			log.Warnf("event_dispatcher.queue_size 变更需重启服务后生效: %d -> %d", queueSize, cfg)
+		}
 	}
 
 	return log.Configure(logOptions(a.Config, true))
@@ -141,7 +150,12 @@ func (a *App) Bootstrap(configFile string, consoleOutput bool) error {
 	}
 
 	// 事件分发器依赖已加载的配置，且必须在 OnAfterConfig 之前构建。
-	a.eventDispatcher = newEventDispatcher(a.Config.Events, a.Config.EventTimeout.Duration())
+	a.eventDispatcher = newEventDispatcher(
+		a.Config.Events,
+		a.Config.EventDispatcher.Timeout.Duration(),
+		a.Config.EventDispatcher.Workers,
+		a.Config.EventDispatcher.QueueSize,
+	)
 	a.eventDispatcher.InjectAppHook(&a.hooks)
 
 	for _, fn := range a.hooks.OnAfterConfig {
@@ -356,17 +370,24 @@ func (a *App) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	// 2. 关闭缓存 (Badger/Redis)
+	// 2. 排空在途的异步事件：HTTP 已停止，不会再产生新的请求事件
+	if a.eventDispatcher != nil {
+		if err := a.eventDispatcher.Close(ctx); err != nil {
+			errs = append(errs, errors.Wrap(err, "event dispatch drain"))
+		}
+	}
+
+	// 3. 关闭缓存 (Badger/Redis)
 	if err := cache.CloseCache(); err != nil {
 		errs = append(errs, errors.Wrap(err, "cache close"))
 	}
 
-	// 3. 断开数据库连接
+	// 4. 断开数据库连接
 	if err := data.CloseDB(); err != nil {
 		errs = append(errs, errors.Wrap(err, "db close"))
 	}
 
-	// 4. 用户注册的清理 Hook
+	// 5. 用户注册的清理 Hook
 	for _, fn := range a.hooks.OnShutdown {
 		if err := fn(); err != nil {
 			errs = append(errs, err)

@@ -64,12 +64,21 @@ log:
     maxbackups: 3
     compress: true
 
-event_timeout: 3s
+event_dispatcher:
+  timeout: 3s
+  workers: 2
+  queue_size: 8
+
 events:
   - name: T1
     on: article.created
     type: webhook
     entry: ${WEBHOOK_URL}
+    async: true
+    timeout: 7s
+    headers:
+      Authorization: "Bearer ${WEBHOOK_TOKEN}"
+      X-Source: kzhikcn
   - name: T2
     on: auth.login_success
     type: command
