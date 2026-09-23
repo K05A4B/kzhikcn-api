@@ -15,9 +15,20 @@ on:
 
 jobs:
   build-and-push:
-    name: Build and Push Docker Image
+    name: Build and Push Docker Image (${{ matrix.target }})
     runs-on: ubuntu-latest
-    
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 精简镜像：:latest / :<version>
+          - target: production
+            suffix: ""
+          # 扩展镜像：:latest-extends / :<version>-extends
+          - target: extends
+            suffix: "-extends"
+
     permissions:
       contents: read
       packages: write
@@ -50,9 +61,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          target: ${{ matrix.target }}
           push: true
           tags: |
-            ${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:latest
-            ${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}
-            ghcr.io/${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:latest
-            ghcr.io/${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}
+            ${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:latest${{ matrix.suffix }}
+            ${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}${{ matrix.suffix }}
+            ghcr.io/${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:latest${{ matrix.suffix }}
+            ghcr.io/${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}${{ matrix.suffix }}

@@ -58,3 +58,32 @@ go build -o kzhikcn
 ```bash
 ./kzhikcn -c ./sys/config.yml serve -a 100.65.10.13:64435
 ```
+
+## Docker 部署
+
+镜像提供两个版本：
+
+| 标签 | 说明 |
+| :--- | :--- |
+| `latest` / `<version>` | 精简镜像，仅包含运行时依赖 |
+| `latest-extends` / `<version>-extends` | 扩展镜像，额外内置 `curl`、`jq`、`bash`、`python3`、`git`、`imagemagick` 等常用工具，便于 `events` 的 `command` 钩子执行脚本与网络请求 |
+
+```bash
+docker run -d --name kzhikcn \
+  -p 5083:5083 \
+  -e ADDRESS=0.0.0.0:5083 \
+  -e JWT_SECRET=your-secret \
+  -v ./sys:/app/sys \
+  -v ./data:/app/data \
+  kzhikcn-api:latest-extends
+```
+
+也可自行构建指定版本：
+
+```bash
+docker build --target production -t kzhikcn-api:latest .
+docker build --target extends -t kzhikcn-api:latest-extends .
+```
+
+> [!warning]
+> `events` 的 `command` 钩子以服务进程权限执行任意 shell 命令。外层 shell 为 `sh -c`，如需 bash 请在 `entry` 中显式书写 `bash -c '...'`。长任务需调大 `event_dispatcher.timeout`（默认 `5s`），否则会被超时终止。
