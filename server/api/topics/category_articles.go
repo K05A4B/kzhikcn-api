@@ -36,7 +36,7 @@ func GetArticlesByCategory(appCtx *app.AppContext) hdl.Handler[any] {
 			return ErrCategoryNotFound
 		}
 
-		categories, err := data.GetCategories(func(tx *gorm.DB) *gorm.DB {
+		categories, err := data.GetCategories(r.Context(), func(tx *gorm.DB) *gorm.DB {
 			tx = tx.Where("id=?", category.ID).Limit(1).
 				Select("id", "category_name", "description").
 				Preload("Articles", func(db *gorm.DB) *gorm.DB {
@@ -60,7 +60,7 @@ func GetArticlesByCategory(appCtx *app.AppContext) hdl.Handler[any] {
 		resp.Data = c
 		resp.Meta["count"] = len(c.Articles)
 
-		httputil.SetTotal(resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
+		httputil.SetTotal(r.Context(), resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
 			tx = tx.Where("category_id=?", c.ID)
 			if claims == nil {
 				tx = tx.Where("status=?", data.ARTICLE_STATUS_PUBLISHED)

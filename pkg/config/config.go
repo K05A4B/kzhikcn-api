@@ -214,11 +214,65 @@ func LoadConfigFromFile(file string) (*Config, error) {
 	return config, err
 }
 
+// Bind 用 c 的内容替换全局配置，使未持有 App 的包（如 authtoken）与 App 保持一致。
+// 复制的是 c 的深拷贝，避免调用方与全局单例共享切片/映射。
+func Bind(c *Config) {
+	if c == nil {
+		return
+	}
+
+	cloned := c.Clone()
+
+	configMux.Lock()
+	defer configMux.Unlock()
+
+	if config == nil {
+		config = new(Config)
+	}
+	*config = *cloned
+}
+
+// Clone 返回配置的深拷贝。
+// 仅复制会被读取的切片与映射；Log.Lumberjack 指向同一个日志写入器，属于有意共享。
+func (c *Config) Clone() *Config {
+	if c == nil {
+		return nil
+	}
+
+	cloned := *c
+
+	cloned.HttpRate.BlackList = append([]NetAddr(nil), c.HttpRate.BlackList...)
+	cloned.HttpRate.HighQuotaKeys = append([]string(nil), c.HttpRate.HighQuotaKeys...)
+
+	cloned.MRR.Sitemap.Extends = append([]SitemapExtend(nil), c.MRR.Sitemap.Extends...)
+
+	cloned.CORS.AllowedOrigins = append([]string(nil), c.CORS.AllowedOrigins...)
+	cloned.CORS.AllowedMethods = append([]string(nil), c.CORS.AllowedMethods...)
+	cloned.CORS.AllowedHeaders = append([]string(nil), c.CORS.AllowedHeaders...)
+	cloned.CORS.ExposedHeaders = append([]string(nil), c.CORS.ExposedHeaders...)
+
+	if c.Events != nil {
+		events := make([]Event, len(c.Events))
+		for i, event := range c.Events {
+			events[i] = event
+			if event.Headers != nil {
+				headers := make(map[string]string, len(event.Headers))
+				for k, v := range event.Headers {
+					headers[k] = v
+				}
+				events[i].Headers = headers
+			}
+		}
+		cloned.Events = events
+	}
+
+	return &cloned
+}
+
 func GetConf() *Config {
 	configMux.RLock()
 	defer configMux.RUnlock()
-	copied := *config
-	return &copied
+	return config.Clone()
 }
 
 func Conf() *Config {

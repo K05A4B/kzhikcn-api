@@ -1,6 +1,8 @@
 package data
 
 import (
+	"context"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -40,9 +42,9 @@ func (a *Admin) BeforeUpdate(tx *gorm.DB) (err error) {
 	return
 }
 
-func GetAdmin(modifiers ...QueryModifier) ([]Admin, error) {
+func GetAdmin(ctx context.Context, modifiers ...QueryModifier) ([]Admin, error) {
 	admins := []Admin{}
-	tx := db.Model(&Admin{})
+	tx := withContext(ctx).Model(&Admin{})
 
 	tx = ApplyQueryModifier(tx, modifiers...)
 
@@ -55,8 +57,8 @@ func GetAdmin(modifiers ...QueryModifier) ([]Admin, error) {
 	return admins, nil
 }
 
-func GetAdminIDByName(username string) (uint, error) {
-	admin, err := GetAdminByName(username, func(tx *gorm.DB) *gorm.DB {
+func GetAdminIDByName(ctx context.Context, username string) (uint, error) {
+	admin, err := GetAdminByName(ctx, username, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("id")
 	})
 
@@ -67,8 +69,8 @@ func GetAdminIDByName(username string) (uint, error) {
 	return admin.ID, err
 }
 
-func GetAdminByName(username string, modifiers ...QueryModifier) (*Admin, error) {
-	admins, err := GetAdmin(func(tx *gorm.DB) *gorm.DB {
+func GetAdminByName(ctx context.Context, username string, modifiers ...QueryModifier) (*Admin, error) {
+	admins, err := GetAdmin(ctx, func(tx *gorm.DB) *gorm.DB {
 		tx = ApplyQueryModifier(tx, modifiers...)
 		tx = tx.Limit(1)
 		tx = tx.Where("username=?", username)
@@ -86,8 +88,8 @@ func GetAdminByName(username string, modifiers ...QueryModifier) (*Admin, error)
 	return &admins[0], nil
 }
 
-func GetAdminById(id uint, modifiers ...QueryModifier) (*Admin, error) {
-	admins, err := GetAdmin(func(tx *gorm.DB) *gorm.DB {
+func GetAdminById(ctx context.Context, id uint, modifiers ...QueryModifier) (*Admin, error) {
+	admins, err := GetAdmin(ctx, func(tx *gorm.DB) *gorm.DB {
 		tx = ApplyQueryModifier(tx, modifiers...)
 		tx = tx.Limit(1)
 		tx = tx.Where("id=?", id)
@@ -105,15 +107,15 @@ func GetAdminById(id uint, modifiers ...QueryModifier) (*Admin, error) {
 	return &admins[0], nil
 }
 
-func AddAdmin(admin *Admin) error {
-	return db.Create(admin).Error
+func AddAdmin(ctx context.Context, admin *Admin) error {
+	return withContext(ctx).Create(admin).Error
 }
 
-func DeleteAdminByID(id uint) error {
-	return db.Delete(&Admin{}, "id=?", id).Error
+func DeleteAdminByID(ctx context.Context, id uint) error {
+	return withContext(ctx).Delete(&Admin{}, "id=?", id).Error
 }
 
-func UpdateAdminByID(id uint, admin *Admin, modifiers ...QueryModifier) error {
-	tx := ApplyQueryModifier(db, modifiers...)
+func UpdateAdminByID(ctx context.Context, id uint, admin *Admin, modifiers ...QueryModifier) error {
+	tx := ApplyQueryModifier(withContext(ctx), modifiers...)
 	return tx.Where("id=?", id).Updates(admin).Error
 }

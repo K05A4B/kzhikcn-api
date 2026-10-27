@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"kzhikcn/pkg/utils"
 
 	"gorm.io/gorm"
@@ -16,13 +17,13 @@ type Tag struct {
 	Articles []Article `gorm:"many2many:article_tags" json:"articles,omitzero"`
 }
 
-func (a *Tag) Update(et EditableTag) error {
+func (a *Tag) Update(ctx context.Context, et EditableTag) error {
 	tag := &Tag{
 		TagName: et.TagName,
 	}
 
 	selectedFields := []string{}
-	tx := db.Model(a)
+	tx := withContext(ctx).Model(a)
 
 	if !utils.IsEmptyString(et.TagName) {
 		selectedFields = append(selectedFields, "tag_name")
@@ -31,10 +32,10 @@ func (a *Tag) Update(et EditableTag) error {
 	return tx.Select(selectedFields).Updates(tag).Error
 }
 
-func FindOrCreateTagsByName(tagNames ...string) ([]*Tag, error) {
+func FindOrCreateTagsByName(ctx context.Context, tagNames ...string) ([]*Tag, error) {
 	tags := []*Tag{}
 
-	return tags, db.Transaction(func(tx *gorm.DB) error {
+	return tags, withContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, tagName := range tagNames {
 			if tagName == "" {
 				continue
@@ -57,8 +58,8 @@ func FindOrCreateTagsByName(tagNames ...string) ([]*Tag, error) {
 
 }
 
-func DeleteTag(modifiers ...QueryModifier) error {
-	return db.Transaction(func(tx *gorm.DB) error {
+func DeleteTag(ctx context.Context, modifiers ...QueryModifier) error {
+	return withContext(ctx).Transaction(func(tx *gorm.DB) error {
 		tx = ApplyQueryModifier(tx, modifiers...)
 		return tx.Delete(&Tag{}).Error
 	})

@@ -6,6 +6,7 @@ import (
 	"io"
 	"kzhikcn/pkg/assets/article"
 	"kzhikcn/pkg/data"
+	"kzhikcn/pkg/log"
 	"kzhikcn/pkg/utils"
 	"kzhikcn/server/common/articlemd"
 	"path/filepath"
@@ -68,19 +69,56 @@ func isPublishing(status *data.ArticleStatus) bool {
 	return status != nil && *status == data.ARTICLE_STATUS_PUBLISHED
 }
 
-func getArticleByID(id string, mods ...data.QueryModifier) (*data.Article, error) {
-	article, err := data.GetArticleByAnyID(id, append([]data.QueryModifier{data.LimitQueryModifier(1)}, mods...)...)
-	if article == nil || err == gorm.ErrRecordNotFound {
+func getArticleByID(ctx context.Context, id string, mods ...data.QueryModifier) (*data.Article, error) {
+	article, err := data.GetArticleByAnyID(ctx, id, append([]data.QueryModifier{data.LimitQueryModifier(1)}, mods...)...)
+	if article == nil || errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrArticleNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	return article, err
+	return article, nil
+}
+
+// resolveCategory 解析分类引用，支持 "#<id>" 与分类名称两种写法。
+func resolveCategory(tx *gorm.DB, ref string) (*data.Category, error) {
+	category := data.Category{}
+	query := tx
+
+	if strings.HasPrefix(ref, "#") {
+		id, err := strconv.ParseUint(ref[1:], 10, 64)
+		if err != nil {
+			return nil, ErrCategoryNotFound
+		}
+		query = query.Where("id=?", id)
+	} else {
+		query = query.Where("category_name=?", ref)
+	}
+
+	err := query.Limit(1).First(&category).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrCategoryNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &category, nil
+}
+
+// runArticleHooks 执行事务提交后的钩子。
+// 数据已经落库，钩子失败只记录日志，避免调用方因收到错误而重试产生重复副作用。
+func (svc *ArticleService) runArticleHooks(stage string, ctx context.Context, article *data.Article,
+	hooks []func(ctx context.Context, article *data.Article) error) {
+	for _, hook := range hooks {
+		if err := hook(ctx, article); err != nil {
+			log.Errorf("%s hook failed: articleID=%s, err=%v", stage, article.ID, err)
+		}
+	}
 }
 
 func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpdateFields) (*data.Article, error) {
-	article, err := getArticleByID(id)
+	article, err := getArticleByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +137,7 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 		}
 	}
 
-	err = svc.ctx.DB.Transaction(func(tx *gorm.DB) error {
+	err = svc.ctx.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		selectedFields := []string{}
 
 		if ea.Title != nil {
@@ -162,33 +200,24 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 		}
 
 		if ea.Category != nil {
-			categoryString := *ea.Category
-			category := data.Category{}
-
-			if categoryString != "" && categoryString[0] == '#' {
-				id, err := strconv.ParseUint(categoryString[1:], 10, 64)
-				if err == nil {
-					category.ID = uint(id)
+			if *ea.Category == "" {
+				// 空字符串表示解除分类关联
+				if err := tx.Model(article).Update("category_id", nil).Error; err != nil {
+					return err
 				}
-			}
-
-			if category.ID != 0 {
-				err = tx.Where("id=?", category.ID).Limit(1).First(&category).Error
+				article.CategoryID = nil
+				article.Category = data.Category{}
 			} else {
-				err = tx.Where("category_name=?", categoryString).Limit(1).First(&category).Error
-			}
+				category, err := resolveCategory(tx, *ea.Category)
+				if err != nil {
+					return err
+				}
 
-			if err == gorm.ErrRecordNotFound {
-				return ErrCategoryNotFound
-			}
-
-			if err != nil {
-				return err
-			}
-
-			err = tx.Model(article).Association("Category").Replace(&category)
-			if err != nil {
-				return err
+				if err = tx.Model(article).Association("Category").Replace(category); err != nil {
+					return err
+				}
+				article.CategoryID = &category.ID
+				article.Category = *category
 			}
 		}
 
@@ -200,20 +229,12 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 	}
 
 	if isPublishing(ea.Status) {
-		for _, hook := range svc.hooks.AfterPublish {
-			if err := hook(ctx, article); err != nil {
-				return nil, err
-			}
-		}
+		svc.runArticleHooks("after publish", ctx, article, svc.hooks.AfterPublish)
 	}
 
-	for _, hook := range svc.hooks.AfterUpdateInfo {
-		if err := hook(ctx, article); err != nil {
-			return nil, err
-		}
-	}
+	svc.runArticleHooks("after update info", ctx, article, svc.hooks.AfterUpdateInfo)
 
-	fresh, err := getArticleByID(id,
+	fresh, err := getArticleByID(ctx, id,
 		func(tx *gorm.DB) *gorm.DB { return tx.Preload("Tags").Preload("Category") })
 	if err != nil {
 		return nil, err
@@ -223,7 +244,7 @@ func (svc *ArticleService) Update(ctx context.Context, id string, ea ArticleUpda
 }
 
 func (svc *ArticleService) IncrementViews(ctx context.Context, id string) (int, error) {
-	article, err := getArticleByID(id, func(tx *gorm.DB) *gorm.DB {
+	article, err := getArticleByID(ctx, id, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("views", "id").
 			Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
 	})
@@ -231,11 +252,11 @@ func (svc *ArticleService) IncrementViews(ctx context.Context, id string) (int, 
 		return 0, err
 	}
 
-	err = svc.ctx.DB.Model(article).UpdateColumn("views", gorm.Expr("views+?", 1)).Error
+	err = svc.ctx.DB.WithContext(ctx).Model(article).UpdateColumn("views", gorm.Expr("views+?", 1)).Error
 	if err != nil {
 		return 0, err
 	}
-	err = svc.ctx.DB.Model(article).Select("views", "id").Find(article).Error
+	err = svc.ctx.DB.WithContext(ctx).Model(article).Select("views", "id").Find(article).Error
 	if err != nil {
 		return 0, err
 	}
@@ -244,7 +265,7 @@ func (svc *ArticleService) IncrementViews(ctx context.Context, id string) (int, 
 }
 
 func (svc *ArticleService) IncrementLikes(ctx context.Context, id string) (int, error) {
-	article, err := getArticleByID(id, func(tx *gorm.DB) *gorm.DB {
+	article, err := getArticleByID(ctx, id, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("likes", "id").
 			Where("status IN ?", []data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
 	})
@@ -252,12 +273,12 @@ func (svc *ArticleService) IncrementLikes(ctx context.Context, id string) (int, 
 		return 0, err
 	}
 
-	err = svc.ctx.DB.Model(article).UpdateColumn("likes", gorm.Expr("likes+?", 1)).Error
+	err = svc.ctx.DB.WithContext(ctx).Model(article).UpdateColumn("likes", gorm.Expr("likes+?", 1)).Error
 	if err != nil {
 		return 0, err
 	}
 
-	err = svc.ctx.DB.Model(article).Select("likes", "id").Find(article).Error
+	err = svc.ctx.DB.WithContext(ctx).Model(article).Select("likes", "id").Find(article).Error
 	if err != nil {
 		return 0, err
 	}
@@ -274,17 +295,14 @@ func (svc *ArticleService) Create(ctx context.Context, ea *ArticleUpdateFields) 
 
 	var ar *data.Article
 
-	err := svc.ctx.DB.Transaction(func(tx *gorm.DB) error {
-		var category data.Category
-		if ea.Category != nil {
-			err := tx.Where("category_name = ?", ea.Category).First(&category).Error
-			if err == gorm.ErrRecordNotFound {
-				return ErrCategoryNotFound
-			}
-
+	err := svc.ctx.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var category *data.Category
+		if ea.Category != nil && *ea.Category != "" {
+			c, err := resolveCategory(tx, *ea.Category)
 			if err != nil {
 				return err
 			}
+			category = c
 		}
 
 		var tags []data.Tag
@@ -308,8 +326,8 @@ func (svc *ArticleService) Create(ctx context.Context, ea *ArticleUpdateFields) 
 			CoverImage:    utils.NilToValue(ea.CoverImage, ""),
 		}
 
-		if ea.Category != nil {
-			ar.Category = category
+		if category != nil {
+			ar.Category = *category
 		}
 
 		if err := tx.Create(ar).Error; err != nil {
@@ -323,17 +341,13 @@ func (svc *ArticleService) Create(ctx context.Context, ea *ArticleUpdateFields) 
 		return nil, err
 	}
 
-	for _, hook := range svc.hooks.AfterCreate {
-		if err := hook(ctx, ar); err != nil {
-			return nil, err
-		}
-	}
+	svc.runArticleHooks("after create", ctx, ar, svc.hooks.AfterCreate)
 
 	return ar, nil
 }
 
 func (svc *ArticleService) Delete(ctx context.Context, id string, isHard bool) error {
-	article, err := getArticleByID(id, data.OnlyID, func(tx *gorm.DB) *gorm.DB {
+	article, err := getArticleByID(ctx, id, data.OnlyID, func(tx *gorm.DB) *gorm.DB {
 		if isHard {
 			// 修复无法删除标记为已删除的文章的bug
 			return tx.Unscoped()
@@ -351,30 +365,32 @@ func (svc *ArticleService) Delete(ctx context.Context, id string, isHard bool) e
 		}
 	}
 
-	err = svc.ctx.DB.Transaction(func(tx *gorm.DB) error {
+	err = svc.ctx.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		tx = tx.Model(&data.Article{}).Where("id=?", article.ID)
-		if tx == nil {
-			return nil
-		}
 
 		if isHard {
 			tx = tx.Unscoped()
 		}
 
-		if err := tx.Delete(article).Error; err != nil {
-			return err
-		}
-
-		return svc.ctx.Repo.Remove(article.ID.String())
+		return tx.Delete(article).Error
 	})
 
 	if err != nil {
 		return err
 	}
 
+	// 文件系统操作不可回滚，放在事务提交之后执行；
+	// 仅硬删除清理文件，软删除保留内容以便 Restore 能恢复。
+	// 失败只记录日志，避免"数据已删除但接口返回失败"导致调用方重试。
+	if isHard {
+		if err := svc.ctx.Repo.Remove(article.ID.String()); err != nil {
+			log.Errorf("remove article files failed: articleID=%s, err=%v", article.ID, err)
+		}
+	}
+
 	for _, hook := range svc.hooks.AfterDelete {
 		if err := hook(ctx, article.ID.String(), isHard); err != nil {
-			return err
+			log.Errorf("after delete hook failed: articleID=%s, err=%v", article.ID, err)
 		}
 	}
 
@@ -386,7 +402,7 @@ func (svc *ArticleService) Restore(ctx context.Context, ids []string) error {
 		return nil
 	}
 
-	tx := svc.ctx.DB.Model(&data.Article{})
+	tx := svc.ctx.DB.WithContext(ctx).Model(&data.Article{})
 	tx = tx.Unscoped()
 	tx = tx.Where("id IN (?)", ids)
 
@@ -409,18 +425,21 @@ func (svc *ArticleService) GetArticles(ctx context.Context, options GetArticlesO
 		},
 	}
 
-	articles, err = data.GetArticles(func(tx *gorm.DB) *gorm.DB {
+	articles, err = data.GetArticles(ctx, func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Preload("Category").Preload("Tags")
 		tx = tx.Order(orderBy)
 		tx = data.ApplyQueryModifier(tx, modifiers...)
 		return tx
 	}, data.Pagination(options.Page, options.Limit))
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, 0, ErrArticleNotFound
+	if err != nil {
+		return nil, 0, err
 	}
 
-	total, _ = data.Total(articles, modifiers...)
+	total, err = data.Total(ctx, data.Article{}, modifiers...)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	return
 }
@@ -438,31 +457,31 @@ func (svc *ArticleService) GetDeletedArticles(ctx context.Context, options GetAr
 		},
 	}
 
-	articles, err = data.GetArticles(func(tx *gorm.DB) *gorm.DB {
+	articles, err = data.GetArticles(ctx, func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Preload("Category").Preload("Tags")
 		tx = tx.Order(orderBy)
 		tx = data.ApplyQueryModifier(tx, modifiers...)
 		return tx
 	}, data.Pagination(options.Page, options.Limit))
 
-	total, _ = data.Total(articles, modifiers...)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err = data.Total(ctx, data.Article{}, modifiers...)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	return
 }
 
 func (svc *ArticleService) GetArticle(ctx context.Context, id string) (*data.Article, error) {
-	article, err := getArticleByID(id)
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, ErrArticleNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	return article, nil
+	return getArticleByID(ctx, id)
 }
 
 func (svc *ArticleService) GetContent(ctx context.Context, articleID string) (io.ReadCloser, error) {
-	article, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(ctx, articleID, data.OnlyID)
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +489,7 @@ func (svc *ArticleService) GetContent(ctx context.Context, articleID string) (io
 }
 
 func (svc *ArticleService) UpdateContent(ctx context.Context, articleID string, reader io.Reader) error {
-	article, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(ctx, articleID, data.OnlyID)
 	if err != nil {
 		return err
 	}
@@ -486,7 +505,7 @@ func (svc *ArticleService) UpdateContent(ctx context.Context, articleID string, 
 }
 
 func (svc *ArticleService) GetRenderedContent(ctx context.Context, articleID string) ([]byte, error) {
-	article, err := getArticleByID(articleID, func(tx *gorm.DB) *gorm.DB {
+	article, err := getArticleByID(ctx, articleID, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("id").Where("status IN ?",
 			[]data.ArticleStatus{data.ARTICLE_STATUS_PUBLISHED, data.ARTICLE_STATUS_HIDDEN})
 	})
@@ -515,7 +534,7 @@ func (svc *ArticleService) GetRenderedContent(ctx context.Context, articleID str
 }
 
 func (svc *ArticleService) UploadAsset(ctx context.Context, articleID, filename string, file io.Reader) error {
-	article, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(ctx, articleID, data.OnlyID)
 	if err != nil {
 		return err
 	}
@@ -539,7 +558,7 @@ func (svc *ArticleService) UploadAsset(ctx context.Context, articleID, filename 
 }
 
 func (svc *ArticleService) DeleteAsset(ctx context.Context, articleID, filename string) error {
-	article, err := getArticleByID(articleID, data.OnlyID)
+	article, err := getArticleByID(ctx, articleID, data.OnlyID)
 	if err != nil {
 		return err
 	}
@@ -547,7 +566,7 @@ func (svc *ArticleService) DeleteAsset(ctx context.Context, articleID, filename 
 }
 
 func (svc *ArticleService) ListAssets(ctx context.Context, articleID string) ([]string, error) {
-	articleEntity, err := getArticleByID(articleID, data.OnlyID)
+	articleEntity, err := getArticleByID(ctx, articleID, data.OnlyID)
 	if err != nil {
 		return nil, err
 	}

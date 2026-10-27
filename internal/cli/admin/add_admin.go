@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -27,13 +28,13 @@ func addAdmin(ctx *cli.Context) error {
 		return errors.Errorf("密码长度不能少于 %d 位", minPasswordLength)
 	}
 
-	if _, err := data.GetAdminByName(name); err == nil {
+	if _, err := data.GetAdminByName(context.Background(), name); err == nil {
 		return errors.Errorf("管理员 %s 已存在", name)
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrap(err, "检查管理员是否存在失败")
 	}
 
-	err = data.AddAdmin(&data.Admin{
+	err = data.AddAdmin(context.Background(), &data.Admin{
 		Username: name,
 		Password: []byte(password),
 		Email:    strings.TrimSpace(ctx.String("email")),

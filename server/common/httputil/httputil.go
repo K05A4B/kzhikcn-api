@@ -22,13 +22,6 @@ func InvalidExpression(err error) *hdl.HandlerError {
 	return hdl.Error(400, err.Error(), err, "system.expr.invalid")
 }
 
-func RedirectTo(url string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusPermanentRedirect)
-		w.Header().Set("Location", url)
-	}
-}
-
 func QueryString(r *http.Request, key, defaultValue string) string {
 	query := r.URL.Query()
 
@@ -160,8 +153,8 @@ func ApplyPagination(r *http.Request, defaultLimit, maxLimit int, tx *gorm.DB) *
 	return tx
 }
 
-func SetTotal(resp *hdl.Response, model any, modifiers ...data.QueryModifier) {
-	total, err := data.Total(model, modifiers...)
+func SetTotal(ctx context.Context, resp *hdl.Response, model any, modifiers ...data.QueryModifier) {
+	total, err := data.Total(ctx, model, modifiers...)
 	if err != nil {
 		_, file, line, _ := runtime.Caller(1)
 		log.With("caller", fmt.Sprintf("%s:%d", file, line)).Error(err)

@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"strings"
 
 	"kzhikcn/internal/cli/runtime"
@@ -43,7 +44,7 @@ func mfaText(enabled bool) string {
 func resolveAdminByFlags(ctx *cli.Context) (*data.Admin, error) {
 	if ctx.IsSet("id") {
 		id := ctx.Uint("id")
-		admin, err := data.GetAdminById(id)
+		admin, err := data.GetAdminById(context.Background(), id)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.Errorf("没有找到 ID 为 %d 的管理员", id)
 		}
@@ -58,7 +59,7 @@ func resolveAdminByFlags(ctx *cli.Context) (*data.Admin, error) {
 		return nil, errors.New("需要提供管理员的 ID 或用户名")
 	}
 
-	admin, err := data.GetAdminByName(name)
+	admin, err := data.GetAdminByName(context.Background(), name)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Errorf("没有找到管理员 %s", name)
 	}

@@ -36,7 +36,7 @@ func GetArticlesByTag(appCtx *app.AppContext) hdl.Handler[any] {
 			return ErrTagNotFound
 		}
 
-		tags, err := data.GetTags(func(tx *gorm.DB) *gorm.DB {
+		tags, err := data.GetTags(r.Context(), func(tx *gorm.DB) *gorm.DB {
 			tx = tx.Where("id=?", tag.ID).Limit(1).
 				Select("id", "tag_name").
 				Preload("Articles", func(db *gorm.DB) *gorm.DB {
@@ -60,7 +60,7 @@ func GetArticlesByTag(appCtx *app.AppContext) hdl.Handler[any] {
 		resp.Data = t
 		resp.Meta["count"] = len(t.Articles)
 
-		httputil.SetTotal(resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
+		httputil.SetTotal(r.Context(), resp, data.Article{}, func(tx *gorm.DB) *gorm.DB {
 			tx = tx.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
 				Where("article_tags.tag_id = ?", t.ID)
 			if claims == nil {

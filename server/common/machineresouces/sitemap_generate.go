@@ -1,6 +1,7 @@
 package machineresouces
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -36,7 +37,7 @@ func parseTpl(conf *config.MachineReadableResources, tpl config.TemplateString, 
 	return fmt.Sprintf("%s%s", conf.BaseUrl, res), nil
 }
 
-func GenerateSitemap(w io.Writer) error {
+func GenerateSitemap(ctx context.Context, w io.Writer) error {
 	conf := config.Conf().MRR
 
 	urls := []SitemapURL{}
@@ -47,7 +48,7 @@ func GenerateSitemap(w io.Writer) error {
 		urls = append(urls, u)
 	}
 
-	articleUrls, err := articleURLs(&conf)
+	articleUrls, err := articleURLs(ctx, &conf)
 	if err != nil {
 		return err
 	}
@@ -82,8 +83,8 @@ func GenerateSitemap(w io.Writer) error {
 	return nil
 }
 
-func articleURLs(conf *config.MachineReadableResources) ([]SitemapURL, error) {
-	articles, err := data.GetArticles(func(tx *gorm.DB) *gorm.DB {
+func articleURLs(ctx context.Context, conf *config.MachineReadableResources) ([]SitemapURL, error) {
+	articles, err := data.GetArticles(ctx, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("id, custom_id, updated_at").Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
 	})
 

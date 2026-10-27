@@ -395,10 +395,18 @@ POST /api/v1/articles
 | customID       | 字符串 | 否   | 自定义 ID                                 | 自动生成 |
 | description    | 字符串 | 否   | 文章描述                                  | ""       |
 | coverImage     | 字符串 | 否   | 封面图片 URL                              | ""       |
-| category       | 字符串 | 否   | 分类名称（必须已存在）                     | -        |
+| category       | 字符串 | 否   | 分类引用，见下方说明（分类必须已存在）     | -        |
 | tags           | 数组   | 否   | 标签名称列表，不存在则自动创建             | `[]`     |
 | enableComment  | 布尔值 | 否   | 是否启用评论                              | `false`  |
 | status         | 字符串 | 否   | 状态：`published` / `draft` / `hidden`     | `draft`  |
+
+> [!note]
+> `category` 支持两种写法，二选一：
+> - **分类名称**：`"category": "技术"`
+> - **分类 ID**：`"category": "#3"`（`#` 后跟分类的数字 ID）
+>
+> 以 `#` 开头的一律按 ID 解析，因此以 `#` 开头的分类名称无法通过名称引用。
+> 两种写法都要求分类已存在，否则返回 `articles.category_not_found`；传 `""` 或不传该字段表示不设置分类。
 
 **请求示例**：
 
@@ -409,6 +417,7 @@ Content-Type: application/json
 
 {
   "title": "新文章",
+  "category": "#1",
   "tags": ["技术", "教程"]
 }
 ```
@@ -481,8 +490,9 @@ PATCH /api/v1/articles/{article_id}
 **请求体参数**：
 
 > [!note]
-> 空字符串表示不修改该字段。
-> `tags` 字段传空数组 `[]` 表示清空所有标签；传 `null` 表示不修改标签。
+> - 字段省略或传 `null` 表示不修改；字符串字段传 `""` 会被写入空字符串（`category` 例外，见下）。
+> - `tags` 字段传空数组 `[]` 表示清空所有标签；传 `null` 表示不修改标签。
+> - `category` 支持 `"技术"`（名称）与 `"#3"`（ID）两种写法，规则与创建文章一致；传 `""` 表示清空文章分类。
 
 | 字段名         | 类型   | 必填 | 描述                                  |
 | -------------- | ------ | ---- | ------------------------------------- |
@@ -490,7 +500,7 @@ PATCH /api/v1/articles/{article_id}
 | customID       | 字符串 | 否   | 自定义 ID                             |
 | description    | 字符串 | 否   | 文章描述                              |
 | coverImage     | 字符串 | 否   | 封面图片 URL                          |
-| category       | 字符串 | 否   | 分类名称（必须已存在）                 |
+| category       | 字符串 | 否   | 分类引用：分类名称或 `#<id>`（必须已存在） |
 | tags           | 数组   | 否   | 标签名称列表，`[]` 清空，`null` 不修改 |
 | enableComment  | 布尔值 | 否   | 是否启用评论                          |
 | status         | 字符串 | 否   | 状态：`published` / `draft` / `hidden` |
@@ -509,6 +519,7 @@ Content-Type: application/json
   "title": "更新后的文章标题",
   "status": "published",
   "customID": "article1",
+  "category": "#1",
   "tags": ["技术", "新标签"]
 }
 ```

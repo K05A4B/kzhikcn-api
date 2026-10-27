@@ -251,6 +251,30 @@ func TestUpdate_CategoryByID(t *testing.T) {
 	assert.Equal(t, cat.ID, *updated.CategoryID)
 }
 
+func TestUpdate_ClearCategory(t *testing.T) {
+	cleanDB(t)
+	svc := newTestService()
+	ctx := context.Background()
+
+	cat := newTestCategory(t, "to-clear")
+	article, err := svc.Create(ctx, &ArticleUpdateFields{
+		Title:    ptr("Clear Category"),
+		Category: ptr(cat.CategoryName),
+	})
+	require.NoError(t, err)
+
+	before, err := svc.GetArticle(ctx, article.ID.String())
+	require.NoError(t, err)
+	require.NotNil(t, before.CategoryID)
+
+	updated, err := svc.Update(ctx, article.ID.String(), ArticleUpdateFields{
+		Category: ptr(""),
+	})
+	require.NoError(t, err)
+	assert.Nil(t, updated.CategoryID)
+	assert.Zero(t, updated.Category.ID)
+}
+
 func TestUpdate_ArticleNotFound(t *testing.T) {
 	cleanDB(t)
 	svc := newTestService()
@@ -285,7 +309,7 @@ func TestDelete_SoftDelete(t *testing.T) {
 	err := svc.Delete(ctx, article.ID.String(), false)
 	require.NoError(t, err)
 
-	_, err = data.GetArticleById(article.ID.String(), data.LimitQueryModifier(1))
+	_, err = data.GetArticleById(ctx, article.ID.String(), data.LimitQueryModifier(1))
 	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }
 
@@ -299,7 +323,7 @@ func TestDelete_HardDelete(t *testing.T) {
 	err := svc.Delete(ctx, article.ID.String(), true)
 	require.NoError(t, err)
 
-	_, err = data.GetArticleById(article.ID.String(),
+	_, err = data.GetArticleById(ctx, article.ID.String(),
 		func(tx *gorm.DB) *gorm.DB { return tx.Unscoped().Limit(1) })
 	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }
@@ -324,7 +348,7 @@ func TestRestore(t *testing.T) {
 	err := svc.Restore(ctx, []string{article.ID.String()})
 	require.NoError(t, err)
 
-	restored, err := data.GetArticleById(article.ID.String(), data.LimitQueryModifier(1))
+	restored, err := data.GetArticleById(ctx, article.ID.String(), data.LimitQueryModifier(1))
 	require.NoError(t, err)
 	assert.Equal(t, "To Restore", restored.Title)
 }

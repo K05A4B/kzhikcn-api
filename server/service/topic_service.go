@@ -23,25 +23,31 @@ func NewTopicService(ctx *ServiceContext) *TopicService {
 }
 
 func (s *TopicService) GetCategories(ctx context.Context, page, limit int, modifier data.QueryModifier) ([]data.Category, int64, error) {
-	categories, err := data.GetCategories(modifier, data.Pagination(page, limit))
+	categories, err := data.GetCategories(ctx, modifier, data.Pagination(page, limit))
 	if err != nil {
 		return nil, 0, err
 	}
 
-	total, _ := data.Total(data.Category{}, modifier)
+	total, err := data.Total(ctx, data.Category{}, modifier)
+	if err != nil {
+		return nil, 0, err
+	}
 	return categories, total, nil
 }
 
 func (s *TopicService) CreateCategory(ctx context.Context, input data.EditableCategory) (*data.Category, error) {
-	category, err := data.CreateCategory(input)
-	if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "UNIQUE constraint failed") {
-		return nil, ErrCategoryExist
+	category, err := data.CreateCategory(ctx, input)
+	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return nil, ErrCategoryExist
+		}
+		return nil, err
 	}
-	return category, err
+	return category, nil
 }
 
 func (s *TopicService) UpdateCategory(ctx context.Context, categoryID uint, input data.EditableCategory) error {
-	categories, err := data.GetCategories(func(tx *gorm.DB) *gorm.DB {
+	categories, err := data.GetCategories(ctx, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("id=?", categoryID).Limit(1)
 	})
 	if err != nil || len(categories) == 0 {
@@ -49,11 +55,11 @@ func (s *TopicService) UpdateCategory(ctx context.Context, categoryID uint, inpu
 	}
 
 	category := categories[0]
-	return category.Update(input)
+	return category.Update(ctx, input)
 }
 
 func (s *TopicService) GetCategoryByNameOrID(ctx context.Context, name string) (*data.Category, error) {
-	categories, err := data.GetCategories(func(tx *gorm.DB) *gorm.DB {
+	categories, err := data.GetCategories(ctx, func(tx *gorm.DB) *gorm.DB {
 		if isNumeric(name) {
 			tx = tx.Where("id=?", name)
 		} else {
@@ -69,23 +75,26 @@ func (s *TopicService) GetCategoryByNameOrID(ctx context.Context, name string) (
 }
 
 func (s *TopicService) DeleteCategories(ctx context.Context, ids []uint) error {
-	return data.DeleteCategories(func(tx *gorm.DB) *gorm.DB {
+	return data.DeleteCategories(ctx, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("id IN ?", ids)
 	})
 }
 
 func (s *TopicService) GetTags(ctx context.Context, page, limit int, modifier data.QueryModifier) ([]data.Tag, int64, error) {
-	tags, err := data.GetTags(modifier, data.Pagination(page, limit))
+	tags, err := data.GetTags(ctx, modifier, data.Pagination(page, limit))
 	if err != nil {
 		return nil, 0, err
 	}
 
-	total, _ := data.Total(data.Tag{}, modifier)
+	total, err := data.Total(ctx, data.Tag{}, modifier)
+	if err != nil {
+		return nil, 0, err
+	}
 	return tags, total, nil
 }
 
 func (s *TopicService) UpdateTag(ctx context.Context, tagID uint, input data.EditableTag) error {
-	tags, err := data.GetTags(func(tx *gorm.DB) *gorm.DB {
+	tags, err := data.GetTags(ctx, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("id=?", tagID).Limit(1)
 	})
 	if err != nil || len(tags) == 0 {
@@ -93,11 +102,11 @@ func (s *TopicService) UpdateTag(ctx context.Context, tagID uint, input data.Edi
 	}
 
 	tag := tags[0]
-	return tag.Update(input)
+	return tag.Update(ctx, input)
 }
 
 func (s *TopicService) GetTagByNameOrID(ctx context.Context, name string) (*data.Tag, error) {
-	tags, err := data.GetTags(func(tx *gorm.DB) *gorm.DB {
+	tags, err := data.GetTags(ctx, func(tx *gorm.DB) *gorm.DB {
 		if isNumeric(name) {
 			tx = tx.Where("id=?", name)
 		} else {
@@ -113,7 +122,7 @@ func (s *TopicService) GetTagByNameOrID(ctx context.Context, name string) (*data
 }
 
 func (s *TopicService) DeleteTags(ctx context.Context, ids []uint) error {
-	return data.DeleteTag(func(tx *gorm.DB) *gorm.DB {
+	return data.DeleteTag(ctx, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("id IN ?", ids)
 	})
 }

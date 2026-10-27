@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,17 +64,17 @@ func (a *Article) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
-func GetArticleByAnyID(id string, modifiers ...QueryModifier) (*Article, error) {
+func GetArticleByAnyID(ctx context.Context, id string, modifiers ...QueryModifier) (*Article, error) {
 	_, err := uuid.Parse(id)
 	if err != nil {
-		return GetArticleByCustomID(id, modifiers...)
+		return GetArticleByCustomID(ctx, id, modifiers...)
 	}
 
-	return GetArticleById(id, modifiers...)
+	return GetArticleById(ctx, id, modifiers...)
 }
 
-func GetArticles(m ...QueryModifier) ([]Article, error) {
-	tx := db.Model(&Article{})
+func GetArticles(ctx context.Context, m ...QueryModifier) ([]Article, error) {
+	tx := withContext(ctx).Model(&Article{})
 	tx = ApplyQueryModifier(tx, m...)
 
 	articles := []Article{}
@@ -81,8 +82,8 @@ func GetArticles(m ...QueryModifier) ([]Article, error) {
 	return articles, tx.Find(&articles).Error
 }
 
-func getFirstArticle(modifiers ...QueryModifier) (*Article, error) {
-	articles, err := GetArticles(modifiers...)
+func getFirstArticle(ctx context.Context, modifiers ...QueryModifier) (*Article, error) {
+	articles, err := GetArticles(ctx, modifiers...)
 
 	if err != nil {
 		return nil, err
@@ -95,22 +96,22 @@ func getFirstArticle(modifiers ...QueryModifier) (*Article, error) {
 	return &articles[0], nil
 }
 
-func GetArticleById(id string, modifiers ...QueryModifier) (*Article, error) {
-	return getFirstArticle(func(tx *gorm.DB) *gorm.DB {
+func GetArticleById(ctx context.Context, id string, modifiers ...QueryModifier) (*Article, error) {
+	return getFirstArticle(ctx, func(tx *gorm.DB) *gorm.DB {
 		tx = ApplyQueryModifier(tx, modifiers...)
 		return tx.Where("id=?", id)
 	})
 }
 
-func GetArticleByCustomID(id string, modifiers ...QueryModifier) (*Article, error) {
-	return getFirstArticle(func(tx *gorm.DB) *gorm.DB {
+func GetArticleByCustomID(ctx context.Context, id string, modifiers ...QueryModifier) (*Article, error) {
+	return getFirstArticle(ctx, func(tx *gorm.DB) *gorm.DB {
 		tx = ApplyQueryModifier(tx, modifiers...)
 		return tx.Where("custom_id=?", id)
 	})
 }
 
-func GetTags(modifiers ...QueryModifier) ([]Tag, error) {
-	tx := db.Model(&Tag{})
+func GetTags(ctx context.Context, modifiers ...QueryModifier) ([]Tag, error) {
+	tx := withContext(ctx).Model(&Tag{})
 	tx = ApplyQueryModifier(tx, modifiers...)
 
 	tags := []Tag{}

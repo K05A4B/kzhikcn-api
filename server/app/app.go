@@ -79,11 +79,14 @@ func (a *App) loadConfig() error {
 		return err
 	}
 
+	// 就地覆盖以保持 *Config 指针稳定（ServiceContext 等持有者无需重建），
+	// 再同步到全局单例，避免 App 与 config.GetConf() 出现两份不同内容。
 	if a.Config == nil {
 		a.Config = conf
 	} else {
 		(*a.Config) = (*conf)
 	}
+	config.Bind(a.Config)
 
 	return nil
 }
@@ -93,21 +96,23 @@ func (a *App) ReloadConfig() error {
 		return err
 	}
 
+	conf := a.GetConfig()
+
 	if a.eventDispatcher != nil {
-		a.eventDispatcher.setTimeout(a.Config.EventDispatcher.Timeout.Duration())
-		a.eventDispatcher.MakeEventsMap(a.Config.Events)
+		a.eventDispatcher.setTimeout(conf.EventDispatcher.Timeout.Duration())
+		a.eventDispatcher.MakeEventsMap(conf.Events)
 
 		// 执行池规模仅启动时生效，配置变更需重启服务
 		workers, queueSize := a.eventDispatcher.poolConfig()
-		if cfg := a.Config.EventDispatcher.Workers; cfg > 0 && cfg != workers {
+		if cfg := conf.EventDispatcher.Workers; cfg > 0 && cfg != workers {
 			log.Warnf("event_dispatcher.workers 变更需重启服务后生效: %d -> %d", workers, cfg)
 		}
-		if cfg := a.Config.EventDispatcher.QueueSize; cfg > 0 && cfg != queueSize {
+		if cfg := conf.EventDispatcher.QueueSize; cfg > 0 && cfg != queueSize {
 			log.Warnf("event_dispatcher.queue_size 变更需重启服务后生效: %d -> %d", queueSize, cfg)
 		}
 	}
 
-	return log.Configure(logOptions(a.Config, true))
+	return log.Configure(logOptions(&conf, true))
 }
 
 // logOptions 将日志配置翻译为 pkg/log 的构建参数。
@@ -126,9 +131,8 @@ func logOptions(conf *config.Config, consoleOutput bool) log.Options {
 
 func (a *App) GetConfig() config.Config {
 	a.confMutex.RLock()
-	conf := *a.Config
 	defer a.confMutex.RUnlock()
-	return conf
+	return *a.Config.Clone()
 }
 
 // Bootstrap 加载配置文件，完成解析并触发 OnAfterConfig 回调。

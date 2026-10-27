@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -26,7 +27,7 @@ func deleteAdmin(ctx *cli.Context) error {
 		return nil
 	}
 
-	if err := data.DeleteAdminByID(admin.ID); err != nil {
+	if err := data.DeleteAdminByID(context.Background(), admin.ID); err != nil {
 		return errors.Wrap(err, "删除管理员失败")
 	}
 

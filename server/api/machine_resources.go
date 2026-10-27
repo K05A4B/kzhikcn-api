@@ -18,7 +18,7 @@ var SitemapDotXMLHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.
 	}
 
 	w.Header().Set("Content-Type", "application/xml")
-	err := machineresouces.GenerateSitemap(w)
+	err := machineresouces.GenerateSitemap(r.Context(), w)
 	if err != nil {
 		return hdl.Error(http.StatusInternalServerError, "生成Sitemap失败", err, "system.machine_resources.sitemap_generate_failed")
 	}
@@ -36,7 +36,7 @@ var RssDotXMLHandler = hdl.NewSimpleHandler(func(r *http.Request, resp *hdl.Resp
 		max = 10
 	}
 
-	articles, err := data.GetArticles(func(tx *gorm.DB) *gorm.DB {
+	articles, err := data.GetArticles(r.Context(), func(tx *gorm.DB) *gorm.DB {
 		return tx.Limit(max).Order("published_at DESC").Where("status=?", data.ARTICLE_STATUS_PUBLISHED)
 	})
 

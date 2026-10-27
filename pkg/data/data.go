@@ -112,7 +112,7 @@ func parseSQLiteDSN(dsn string) (path string, params map[string]string) {
 
 func AutoMigrates() error {
 	state, err := GetSchemaState()
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 

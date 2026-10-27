@@ -1,8 +1,19 @@
 package data
 
 import (
+	"context"
+
 	"gorm.io/gorm"
 )
+
+// withContext 返回绑定到 ctx 的会话，使查询能够响应请求取消与超时。
+// ctx 为 nil 时回退到 Background，避免调用方传空值导致 panic。
+func withContext(ctx context.Context) *gorm.DB {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return db.WithContext(ctx)
+}
 
 type QueryModifier func(tx *gorm.DB) *gorm.DB
 
@@ -38,10 +49,10 @@ func WhereQueryModifier(query any, cond ...any) QueryModifier {
 	}
 }
 
-func Total(v any, mods ...QueryModifier) (int64, error) {
+func Total(ctx context.Context, v any, mods ...QueryModifier) (int64, error) {
 	var res int64
 
-	tx := db
+	tx := withContext(ctx)
 
 	switch v := v.(type) {
 	case string:

@@ -175,7 +175,6 @@ r.Post("/articles", hdl.New(articles.CreateArticle(appCtx)))
 - **Category**: AutoIncrement PK, hasMany Articles, 唯一名称
 - **Tag**: AutoIncrement PK, many2many Articles via `article_tags`
 - **Admin**: bcrypt 密码, TOTP 双因素
-- ~~**FriendLink / FriendLinkAudit**: 友情链接 + 审核流程（即将移除）~~
 
 ### API 路由
 

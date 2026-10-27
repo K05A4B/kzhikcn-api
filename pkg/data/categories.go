@@ -1,6 +1,9 @@
 package data
 
-import "kzhikcn/pkg/utils"
+import (
+	"context"
+	"kzhikcn/pkg/utils"
+)
 
 type EditableCategory struct {
 	CategoryName string `json:"categoryName"`
@@ -14,7 +17,7 @@ type Category struct {
 	Articles     []Article `gorm:"foreignKey:CategoryID" json:"articles,omitzero"`
 }
 
-func (c *Category) Update(ec EditableCategory) error {
+func (c *Category) Update(ctx context.Context, ec EditableCategory) error {
 	category := Category{
 		CategoryName: ec.CategoryName,
 		Description:  ec.Description,
@@ -30,20 +33,20 @@ func (c *Category) Update(ec EditableCategory) error {
 		selectedField = append(selectedField, "description")
 	}
 
-	tx := db.Model(c)
+	tx := withContext(ctx).Model(c)
 
 	return tx.Select(selectedField).Updates(category).Error
 }
 
-func GetCategories(modifiers ...QueryModifier) ([]Category, error) {
-	tx := db.Model(&Category{})
+func GetCategories(ctx context.Context, modifiers ...QueryModifier) ([]Category, error) {
+	tx := withContext(ctx).Model(&Category{})
 	tx = ApplyQueryModifier(tx, modifiers...)
 
 	categories := []Category{}
 	return categories, tx.Find(&categories).Error
 }
 
-func CreateCategory(ec EditableCategory) (*Category, error) {
+func CreateCategory(ctx context.Context, ec EditableCategory) (*Category, error) {
 	selectedFields := []string{"id"}
 
 	category := &Category{
@@ -59,11 +62,11 @@ func CreateCategory(ec EditableCategory) (*Category, error) {
 		selectedFields = append(selectedFields, "description")
 	}
 
-	return category, db.Select(selectedFields).Create(category).Error
+	return category, withContext(ctx).Select(selectedFields).Create(category).Error
 }
 
-func DeleteCategories(modifiers ...QueryModifier) error {
-	tx := db.Model(Category{})
+func DeleteCategories(ctx context.Context, modifiers ...QueryModifier) error {
+	tx := withContext(ctx).Model(Category{})
 
 	tx = ApplyQueryModifier(tx, modifiers...)
 

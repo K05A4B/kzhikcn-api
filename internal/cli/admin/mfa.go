@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -34,7 +35,7 @@ func generateMFA(ctx *cli.Context) error {
 		return errors.Wrap(err, "生成 TOTP 密钥失败")
 	}
 
-	err = data.UpdateAdminByID(admin.ID, &data.Admin{TotpSecret: []byte(key.Secret())}, func(tx *gorm.DB) *gorm.DB {
+	err = data.UpdateAdminByID(context.Background(), admin.ID, &data.Admin{TotpSecret: []byte(key.Secret())}, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("totp_secret")
 	})
 	if err != nil {
@@ -43,7 +44,7 @@ func generateMFA(ctx *cli.Context) error {
 
 	enable := ctx.Bool("enable")
 	if enable {
-		err = data.UpdateAdminByID(admin.ID, &data.Admin{EnableMFA: true}, func(tx *gorm.DB) *gorm.DB {
+		err = data.UpdateAdminByID(context.Background(), admin.ID, &data.Admin{EnableMFA: true}, func(tx *gorm.DB) *gorm.DB {
 			return tx.Select("enable_mfa")
 		})
 		if err != nil {

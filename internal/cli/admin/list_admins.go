@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"text/tabwriter"
@@ -13,7 +14,7 @@ import (
 )
 
 func listAdmins(ctx *cli.Context) error {
-	admins, err := data.GetAdmin()
+	admins, err := data.GetAdmin(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "查询管理员列表失败")
 	}

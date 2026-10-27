@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -16,7 +17,7 @@ import (
 func findAdminByName(ctx *cli.Context) error {
 	username := strings.TrimSpace(ctx.String("name"))
 
-	admin, err := data.GetAdminByName(username)
+	admin, err := data.GetAdminByName(context.Background(), username)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Errorf("没有找到管理员 %s", username)
 	}

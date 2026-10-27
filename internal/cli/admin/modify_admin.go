@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -59,7 +60,7 @@ func modifyAdmin(ctx *cli.Context) error {
 		return errors.New("没有需要修改的字段")
 	}
 
-	err = data.UpdateAdminByID(admin.ID, &update, func(tx *gorm.DB) *gorm.DB {
+	err = data.UpdateAdminByID(context.Background(), admin.ID, &update, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select(selected)
 	})
 	if err != nil {

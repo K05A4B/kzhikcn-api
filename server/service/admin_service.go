@@ -43,7 +43,7 @@ func (a *AdminService) GetAdminById(ctx context.Context, adminID uint) (*data.Ad
 }
 
 func (a *AdminService) GetAdminByName(ctx context.Context, username string) (*data.Admin, error) {
-	admins, err := data.GetAdmin(func(tx *gorm.DB) *gorm.DB {
+	admins, err := data.GetAdmin(ctx, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("username=?", username).Limit(1)
 	})
 	if admins == nil || errors.Is(err, gorm.ErrRecordNotFound) || len(admins) == 0 {
@@ -81,7 +81,7 @@ func (a *AdminService) ChangePassword(ctx context.Context, adminID uint, oldPw, 
 		return err
 	}
 
-	return data.UpdateAdminByID(adminID, &data.Admin{Password: []byte(newPw)}, func(tx *gorm.DB) *gorm.DB {
+	return data.UpdateAdminByID(ctx, adminID, &data.Admin{Password: []byte(newPw)}, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("password")
 	})
 }
@@ -107,7 +107,7 @@ func (a *AdminService) UpdateInfo(ctx context.Context, adminID uint, fields Admi
 		return nil
 	}
 
-	return data.UpdateAdminByID(adminID, admin, func(tx *gorm.DB) *gorm.DB {
+	return data.UpdateAdminByID(ctx, adminID, admin, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select(selected)
 	})
 }
@@ -125,7 +125,7 @@ func (a *AdminService) GenerateTOTP(ctx context.Context, adminID uint, password,
 		return nil, err
 	}
 
-	err = data.UpdateAdminByID(adminID, &data.Admin{TotpSecret: []byte(key.Secret())}, func(tx *gorm.DB) *gorm.DB {
+	err = data.UpdateAdminByID(ctx, adminID, &data.Admin{TotpSecret: []byte(key.Secret())}, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("totp_secret")
 	})
 	if err != nil {
@@ -157,13 +157,13 @@ func (a *AdminService) SetMFA(ctx context.Context, adminID uint, enable bool, pa
 		return errors.New("invalid otp")
 	}
 
-	return data.UpdateAdminByID(adminID, &data.Admin{EnableMFA: enable}, func(tx *gorm.DB) *gorm.DB {
+	return data.UpdateAdminByID(ctx, adminID, &data.Admin{EnableMFA: enable}, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("enable_mfa")
 	})
 }
 
 func (a *AdminService) getAdminById(ctx context.Context, adminID uint, mods ...func(tx *gorm.DB) *gorm.DB) (*data.Admin, error) {
-	admins, err := data.GetAdmin(func(tx *gorm.DB) *gorm.DB {
+	admins, err := data.GetAdmin(ctx, func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Where("id=?", adminID).Limit(1)
 		for _, m := range mods {
 			tx = m(tx)

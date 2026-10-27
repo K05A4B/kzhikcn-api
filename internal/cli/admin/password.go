@@ -1,6 +1,7 @@
 package cmdadmin
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -16,7 +17,7 @@ import (
 func changePassword(ctx *cli.Context) error {
 	username := strings.TrimSpace(ctx.String("name"))
 
-	admin, err := data.GetAdminByName(username)
+	admin, err := data.GetAdminByName(context.Background(), username)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Errorf("没有找到管理员 %s", username)
 	}
@@ -32,7 +33,7 @@ func changePassword(ctx *cli.Context) error {
 		return errors.Errorf("密码长度不能少于 %d 位", minPasswordLength)
 	}
 
-	err = data.UpdateAdminByID(admin.ID, &data.Admin{Password: []byte(password)}, func(tx *gorm.DB) *gorm.DB {
+	err = data.UpdateAdminByID(context.Background(), admin.ID, &data.Admin{Password: []byte(password)}, func(tx *gorm.DB) *gorm.DB {
 		return tx.Select("password")
 	})
 	if err != nil {
