@@ -68,3 +68,12 @@ jobs:
             ${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}${{ matrix.suffix }}
             ghcr.io/${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:latest${{ matrix.suffix }}
             ghcr.io/${{ vars.REGISTRY_USERNAME }}/kzhikcn-api:${{ steps.version.outputs.version }}${{ matrix.suffix }}
+
+      - name: 🚀 Trigger webhook
+        if: ${{ github.repository == 'k05a4b/kzhikcn-api' }}
+        run: |
+          curl -X POST ${{ secrets.WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.WEBHOOK_TOKEN }}" \
+            -d '{ "repository": "${{ github.repository }}" }'
+
